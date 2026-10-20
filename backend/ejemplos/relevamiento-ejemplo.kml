@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Relevamiento de ejemplo</name>
+    <Placemark>
+      <name>Camino a Villa Mailín</name>
+      <description>Relevado en octubre de 2026 con GPS.</description>
+      <ExtendedData>
+        <Data name="estado"><value>Regular</value></Data>
+        <Data name="superficie"><value>Tierra</value></Data>
+        <Data name="localidad"><value>Villa Mailín</value></Data>
+        <Data name="departamento"><value>Avellaneda</value></Data>
+      </ExtendedData>
+      <LineString>
+        <coordinates>
+          -63.2700,-28.5100,0 -63.2650,-28.5150,0 -63.2600,-28.5200,0
+        </coordinates>
+      </LineString>
+    </Placemark>
+    <Placemark>
+      <name>Camino a Los Telares</name>
+      <ExtendedData>
+        <Data name="estado"><value>Malo</value></Data>
+        <Data name="superficie"><value>Ripio</value></Data>
+        <Data name="localidad"><value>Los Telares</value></Data>
+        <Data name="departamento"><value>Salavina</value></Data>
+      </ExtendedData>
+      <MultiGeometry>
+        <LineString>
+          <coordinates>
+            -63.4500,-28.9800 -63.4450,-28.9750
+          </coordinates>
+        </LineString>
+        <LineString>
+          <coordinates>
+            -63.4400,-28.9700 -63.4350,-28.9650 -63.4300,-28.9600
+          </coordinates>
+        </LineString>
+      </MultiGeometry>
+    </Placemark>
+  </Document>
+</kml>

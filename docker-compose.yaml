@@ -1,0 +1,33 @@
+# PostgreSQL local para desarrollo.
+# Los valores por defecto coinciden con backend/.env:
+#   postgresql://postgres:postgres@localhost:5432/caminos_rurales?schema=public
+#
+# Uso:
+#   docker compose -f docker-compose.yaml up -d
+#   docker compose -f docker-compose.yaml down
+#
+# Para cambiar las credenciales sin tocar este archivo, definí POSTGRES_USER,
+# POSTGRES_PASSWORD, POSTGRES_DB y POSTGRES_PORT en un .env en la raíz
+# (ese archivo está ignorado por git).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: caminos-rurales-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-caminos_rurales}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-caminos_rurales}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:

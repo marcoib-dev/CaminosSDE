@@ -1,0 +1,109 @@
+import { prisma } from '../config/prisma.js';
+import { registrarAuditoria } from '../services/auditoria.service.js';
+import { ApiError } from '../utils/ApiError.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+
+const caminoConRelaciones = {
+  tramos: { orderBy: { creadoEn: 'asc' } },
+  fotos: true,
+};
+
+export const listar = asyncHandler(async (req, res) => {
+  const { q, departamento, activo } = req.consulta;
+
+  const where = {};
+  if (q) where.nombre = { contains: q, mode: 'insensitive' };
+  if (departamento) where.departamento = { equals: departamento, mode: 'insensitive' };
+  if (activo !== undefined) where.activo = activo;
+
+  const caminos = await prisma.camino.findMany({
+    where,
+    include: caminoConRelaciones,
+    orderBy: { nombre: 'asc' },
+  });
+
+  res.json({ datos: caminos });
+});
+
+export const obtener = asyncHandler(async (req, res) => {
+  const camino = await prisma.camino.findUnique({
+    where: { id: req.params.id },
+    include: caminoConRelaciones,
+  });
+
+  if (!camino) {
+    throw new ApiError(404, 'Camino no encontrado.');
+  }
+
+  res.json({ datos: camino });
+});
+
+export const crear = asyncHandler(async (req, res) => {
+  const camino = await prisma.camino.create({ data: req.body });
+
+  await registrarAuditoria({
+    usuarioId: req.usuario.id,
+    accion: 'CREAR',
+    entidad: 'Camino',
+    entidadId: camino.id,
+    detalle: {
+      nombre: camino.nombre,
+      localidad: camino.localidad,
+      departamento: camino.departamento,
+    },
+    ip: req.ip,
+  });
+
+  res.status(201).json({ datos: camino, mensaje: 'Camino creado correctamente.' });
+});
+
+export const actualizar = asyncHandler(async (req, res) => {
+  const existente = await prisma.camino.findUnique({
+    where: { id: req.params.id },
+    select: { id: true },
+  });
+
+  if (!existente) {
+    throw new ApiError(404, 'Camino no encontrado.');
+  }
+
+  const camino = await prisma.camino.update({
+    where: { id: req.params.id },
+    data: req.body,
+  });
+
+  await registrarAuditoria({
+    usuarioId: req.usuario.id,
+    accion: 'EDITAR',
+    entidad: 'Camino',
+    entidadId: camino.id,
+    detalle: { campos: Object.keys(req.body) },
+    ip: req.ip,
+  });
+
+  res.json({ datos: camino, mensaje: 'Camino actualizado correctamente.' });
+});
+
+export const eliminar = asyncHandler(async (req, res) => {
+  const camino = await prisma.camino.findUnique({
+    where: { id: req.params.id },
+    select: { id: true, nombre: true, departamento: true },
+  });
+
+  if (!camino) {
+    throw new ApiError(404, 'Camino no encontrado.');
+  }
+
+  await prisma.camino.delete({ where: { id: req.params.id } });
+
+  await registrarAuditoria({
+    usuarioId: req.usuario.id,
+    accion: 'BORRAR',
+    entidad: 'Camino',
+    entidadId: camino.id,
+    detalle: { nombre: camino.nombre, departamento: camino.departamento },
+    ip: req.ip,
+  });
+
+  res.json({ mensaje: 'Camino eliminado correctamente.' });
+});

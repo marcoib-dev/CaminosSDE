@@ -1,0 +1,183 @@
+// Esquema de base de datos — Caminos Rurales SDE
+// Las geometrías se guardan como GeoJSON (LineString) en columnas Json.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Rol {
+  ADMIN
+  EDITOR
+}
+
+enum EstadoTramo {
+  TRANSITABLE
+  REGULAR
+  INTRANSITABLE
+  EN_OBRA
+}
+
+enum TipoSuperficie {
+  TIERRA
+  RIPIO
+  ENRIPIADO_MEJORADO
+  PAVIMENTADO
+}
+
+enum CategoriaPuntoInteres {
+  HOSPITAL
+  ESCUELA
+  UPA
+}
+
+enum EstadoSugerencia {
+  PENDIENTE
+  REVISADA
+  DESCARTADA
+}
+
+enum AccionAuditoria {
+  CREAR
+  EDITAR
+  BORRAR
+}
+
+model Usuario {
+  id                   String           @id @default(cuid())
+  nombre               String
+  email                String           @unique
+  passwordHash         String
+  rol                  Rol              @default(EDITOR)
+  activo               Boolean          @default(true)
+  creadoEn             DateTime         @default(now())
+  actualizadoEn        DateTime         @updatedAt
+  historial            HistorialTramo[]
+  auditorias           Auditoria[]
+  sugerenciasRevisadas Sugerencia[]     @relation("SugerenciaRevisor")
+
+  @@index([rol])
+  @@index([activo])
+}
+
+model Camino {
+  id            String       @id @default(cuid())
+  nombre        String
+  localidad     String
+  departamento  String
+  descripcion   String?
+  activo        Boolean      @default(true)
+  creadoEn      DateTime     @default(now())
+  actualizadoEn DateTime     @updatedAt
+  tramos        Tramo[]
+  fotos         Foto[]
+  sugerencias   Sugerencia[]
+
+  @@index([departamento])
+  @@index([activo])
+  @@index([nombre])
+}
+
+model Tramo {
+  id            String           @id @default(cuid())
+  caminoId      String
+  camino        Camino           @relation(fields: [caminoId], references: [id], onDelete: Cascade)
+  geometria     Json
+  longitudKm    Float
+  estado        EstadoTramo
+  tipo          TipoSuperficie
+  observaciones String?
+  creadoEn      DateTime         @default(now())
+  actualizadoEn DateTime         @updatedAt
+  historial     HistorialTramo[]
+  fotos         Foto[]
+  sugerencias   Sugerencia[]
+
+  @@index([caminoId])
+  @@index([estado])
+  @@index([tipo])
+}
+
+model HistorialTramo {
+  id                String         @id @default(cuid())
+  tramoId           String
+  tramo             Tramo          @relation(fields: [tramoId], references: [id], onDelete: Cascade)
+  usuarioId         String?
+  usuario           Usuario?       @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  estadoAnterior    EstadoTramo
+  tipoAnterior      TipoSuperficie
+  geometriaAnterior Json
+  estadoNuevo       EstadoTramo
+  tipoNuevo         TipoSuperficie
+  geometriaNuevo    Json
+  fecha             DateTime       @default(now())
+
+  @@index([tramoId])
+  @@index([fecha])
+}
+
+model PuntoInteres {
+  id            String                @id @default(cuid())
+  nombre        String
+  categoria     CategoriaPuntoInteres
+  latitud       Float
+  longitud      Float
+  creadoEn      DateTime              @default(now())
+  actualizadoEn DateTime              @updatedAt
+
+  @@index([categoria])
+}
+
+model Foto {
+  id          String   @id @default(cuid())
+  url         String
+  descripcion String?
+  caminoId    String
+  camino      Camino   @relation(fields: [caminoId], references: [id], onDelete: Cascade)
+  tramoId     String?
+  tramo       Tramo?   @relation(fields: [tramoId], references: [id], onDelete: Cascade)
+  creadoEn    DateTime @default(now())
+
+  @@index([caminoId])
+  @@index([tramoId])
+}
+
+model Sugerencia {
+  id            String           @id @default(cuid())
+  texto         String
+  contacto      String?
+  estado        EstadoSugerencia @default(PENDIENTE)
+  caminoId      String?
+  camino        Camino?          @relation(fields: [caminoId], references: [id], onDelete: SetNull)
+  tramoId       String?
+  tramo         Tramo?           @relation(fields: [tramoId], references: [id], onDelete: SetNull)
+  revisadoPorId String?
+  revisadoPor   Usuario?         @relation("SugerenciaRevisor", fields: [revisadoPorId], references: [id], onDelete: SetNull)
+  revisadoEn    DateTime?
+  creadoEn      DateTime         @default(now())
+  actualizadoEn DateTime         @updatedAt
+
+  @@index([estado])
+  @@index([caminoId])
+  @@index([tramoId])
+}
+
+model Auditoria {
+  id        String          @id @default(cuid())
+  usuarioId String?
+  usuario   Usuario?        @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  accion    AccionAuditoria
+  entidad   String
+  entidadId String?
+  detalle   Json?
+  ip        String?
+  fecha     DateTime        @default(now())
+
+  @@index([fecha])
+  @@index([entidad])
+  @@index([usuarioId])
+}

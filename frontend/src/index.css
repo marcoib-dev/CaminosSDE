@@ -1,0 +1,307 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-arena-50 text-slate-800 antialiased dark:bg-slate-950 dark:text-slate-100;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  ::selection {
+    @apply bg-cyan-200 text-cyan-950;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-cyan-500 ring-offset-2 ring-offset-arena-50 dark:ring-offset-slate-950;
+  }
+}
+
+@layer components {
+  .etiqueta-campo {
+    @apply mb-1.5 block text-sm font-medium text-gray-900 dark:text-slate-200;
+  }
+
+  .control-campo {
+    @apply min-h-10 w-full rounded-md border border-arena-200 bg-arena-50 px-3 py-2 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/25 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500;
+  }
+
+  .boton {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .boton-primario {
+    @apply boton bg-gradient-to-r from-cyan-600 to-teal-600 text-white shadow-sm hover:from-cyan-700 hover:to-teal-700 active:from-cyan-800 active:to-teal-800;
+  }
+
+  .boton-suave {
+    @apply boton border border-arena-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800;
+  }
+
+  .boton-fantasma {
+    @apply boton text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800;
+  }
+
+  .boton-peligro {
+    @apply boton bg-red-600 text-white shadow-sm hover:bg-red-700 active:bg-red-800;
+  }
+
+  .tarjeta {
+    @apply rounded-xl border border-gray-200 bg-white shadow-tarjeta dark:border-slate-800 dark:bg-slate-900;
+  }
+
+  .titulo-pagina {
+    @apply text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl;
+  }
+
+  .subtitulo-pagina {
+    @apply mt-1 text-sm leading-relaxed text-gray-600 dark:text-slate-300;
+  }
+}
+
+/* ---------- Mapa ---------- */
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  background: #e8f1ea;
+  font-family: inherit;
+  z-index: 0;
+}
+
+.mapa-modo-edicion,
+.mapa-modo-edicion .leaflet-interactive {
+  cursor: crosshair !important;
+}
+
+.dark .leaflet-container {
+  background: #020617;
+}
+
+.leaflet-tile-pane {
+  transition: filter 250ms ease;
+}
+
+.dark .leaflet-tile-pane {
+  filter: brightness(0.75) invert(1) contrast(1.05) hue-rotate(180deg) saturate(0.4);
+}
+
+/* Tailwind Preflight limita las imágenes y rompe los tiles de Leaflet. */
+.leaflet-container img {
+  max-width: none !important;
+}
+
+.leaflet-control-zoom {
+  overflow: hidden;
+  border: 1px solid rgba(201, 217, 232, 0.95) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 10px 24px -16px rgba(15, 26, 36, 0.45) !important;
+}
+
+.leaflet-control-zoom a {
+  background: #ffffff !important;
+  color: #0f1a24 !important;
+  border-bottom-color: rgba(201, 217, 232, 0.9) !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: #f0f7ff !important;
+}
+
+.dark .leaflet-control-zoom a {
+  background: #0f172a !important;
+  color: #e2e8f0 !important;
+  border-bottom-color: rgba(148, 163, 184, 0.2) !important;
+}
+
+.dark .leaflet-control-zoom a:hover {
+  background: #1e293b !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #475569 !important;
+  font-size: 10px !important;
+  backdrop-filter: blur(4px);
+}
+
+.leaflet-control-attribution a {
+  color: #0e7490 !important;
+}
+
+.dark .leaflet-control-attribution {
+  background: rgba(15, 23, 42, 0.88) !important;
+  color: #94a3b8 !important;
+}
+
+.dark .leaflet-control-attribution a {
+  color: #67e8f9 !important;
+}
+
+/* Popups */
+
+.leaflet-popup-content-wrapper {
+  border-radius: 14px;
+  padding: 0;
+  overflow: hidden;
+  background: #ffffff;
+  color: #0f1a24;
+  box-shadow: 0 26px 55px -24px rgba(15, 26, 36, 0.45);
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  width: auto !important;
+  line-height: 1.45;
+}
+
+.leaflet-popup-tip {
+  background: #ffffff;
+}
+
+.leaflet-popup-close-button {
+  top: 8px !important;
+  right: 8px !important;
+  width: 26px !important;
+  height: 26px !important;
+  color: #64748b !important;
+  font-size: 20px !important;
+  line-height: 24px !important;
+  border-radius: 9999px;
+}
+
+.leaflet-popup-close-button:hover {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.dark .leaflet-popup-content-wrapper,
+.dark .leaflet-popup-tip {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+.dark .leaflet-popup-close-button {
+  color: #94a3b8 !important;
+}
+
+.dark .leaflet-popup-close-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dark .leaflet-container a.leaflet-popup-close-button {
+  color: #94a3b8;
+}
+
+.popup-tramo {
+  width: 20rem;
+  max-width: calc(100vw - 4rem);
+}
+
+.popup-tramo-contenedor .leaflet-popup-content {
+  max-height: min(80dvh, 48rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
+}
+
+.popup-tramo-contenedor .leaflet-popup-content::-webkit-scrollbar {
+  width: 5px;
+}
+
+.popup-tramo-contenedor .leaflet-popup-content::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: rgba(100, 116, 139, 0.35);
+}
+
+/* Marcadores de puntos de interés */
+
+.marcador-poi-contenedor {
+  background: transparent;
+  border: 0;
+}
+
+.marcador-poi {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9999px;
+  border: 2px solid #ffffff;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: 0 5px 14px rgba(15, 26, 36, 0.35);
+  transition: transform 150ms ease;
+}
+
+.marcador-poi:hover {
+  transform: scale(1.12);
+}
+
+.marcador-poi--hospital {
+  background: #dc2626;
+}
+
+.marcador-poi--escuela {
+  background: #d97706;
+}
+
+.marcador-poi--upa {
+  background: #2563eb;
+}
+
+.dark .marcador-poi {
+  border-color: #e2e8f0;
+}
+
+/* Scrollbars discretos */
+
+.panel-desplazable {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
+}
+
+.panel-desplazable::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.panel-desplazable::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: rgba(100, 116, 139, 0.35);
+}
+
+/* Transiciones del panel móvil */
+
+.panel-filtros {
+  transition:
+    transform 240ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

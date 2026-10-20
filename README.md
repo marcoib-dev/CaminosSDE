@@ -1,0 +1,766 @@
+# Caminos Rurales SDE
+
+Sistema de apoyo a la toma de decisiones sobre los caminos rurales de Santiago del Estero.
+
+Este repositorio contiene el **backend** (API REST) y el **frontend** (mapa público, edición y panel de administración).
+
+## Stack
+
+- Node.js 22+ con Express 5 y ES Modules. La importación de `.gpkg` usa `better-sqlite3` 13 (dependencia de `@ngageoint/geopackage`), que requiere Node 22 o superior.
+- PostgreSQL (Neon en producción) con Prisma ORM.
+- Autenticación con JWT y bcrypt.
+- Validación de datos con zod.
+- Cálculo y división de geometrías con `@turf/turf`.
+- Importación de relevamientos: lectura de `.gpkg` con `@ngageoint/geopackage`, de `.kml` con `@tmcw/togeojson`, reproyección con `proj4` y subida multipart con `multer`.
+- Geometrías guardadas como **GeoJSON `LineString`** en columnas `Json` (sin PostGIS).
+- Frontend con React 18, Vite, React Router, Tailwind CSS y Leaflet/React-Leaflet.
+
+## Estructura
+
+```text
+docker-compose.yaml      PostgreSQL local para desarrollo
+
+backend/
+  prisma/
+    schema.prisma        Modelos y enums
+    seed.js              Usuario ADMIN inicial y caminos de ejemplo
+    migrations/          Migraciones de Prisma
+  src/
+    config/              Variables de entorno y cliente Prisma
+    controllers/         Lógica de cada endpoint
+    middleware/          Autenticación, roles, validación, errores y rate limit
+    routes/              Definición de rutas
+    services/            Auditoría, lógica de tramos, prioridad e importación
+    utils/               GeoJSON, errores y utilidades
+    validators/          Esquemas zod
+    app.js               Aplicación Express
+    server.js            Arranque del servidor
+  ejemplos/              Archivos .kml y .gpkg de prueba para importar
+  scripts/               Generador de los archivos de ejemplo
+
+frontend/
+  src/
+    components/          Encabezado, mapa, filtros, leyenda, popups y formularios
+    components/editor/   Herramientas de dibujo, formularios y panel de edición
+    components/importacion/  Mapa de previsualización y filas de importación
+    constants/           Estados, superficies, colores y categorías de puntos de interés
+    context/             Tema claro/oscuro y sesión (JWT)
+    pages/               Mapa, ranking, login, perfil, sugerencias, importación y administración
+    services/api.js      Cliente de la API (VITE_API_URL)
+    services/token.js    Lectura y escritura del token en localStorage
+    utils/               Formatos, niveles de prioridad y geometría
+    App.jsx              Rutas de React Router y protección por rol
+    main.jsx             Punto de entrada
+  index.html
+  tailwind.config.js
+```
+
+## Requisitos
+
+- Node.js 22 o superior.
+- Una base de datos PostgreSQL accesible (local, Docker o Neon).
+- Docker Desktop instalado y en ejecución si vas a usar la base local con Docker.
+
+### Base de datos local con Docker
+
+El archivo `docker-compose.yaml` de la raíz levanta PostgreSQL 16 en `localhost:5432` con las credenciales de desarrollo:
+
+| Variable | Valor por defecto |
+|---|---|
+| Usuario | `postgres` |
+| Contraseña | `postgres` |
+| Base de datos | `caminos_rurales` |
+
+Iniciar el contenedor:
+
+```bash
+docker compose -f docker-compose.yaml up -d
+```
+
+Verificar que esté saludable:
+
+```bash
+docker compose -f docker-compose.yaml ps
+```
+
+Detenerlo sin borrar los datos:
+
+```bash
+docker compose -f docker-compose.yaml down
+```
+
+Borrar también el volumen con los datos (útil para reiniciar desde cero):
+
+```bash
+docker compose -f docker-compose.yaml down -v
+```
+
+Los valores por defecto coinciden con `backend/.env.example`. Si cambiás las credenciales, definí `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` y `POSTGRES_PORT` en un `.env` en la raíz del proyecto (ignorado por git) y actualizá `DATABASE_URL` en `backend/.env`.
+
+Con la base levantada, seguí con las migraciones y el seed que se indican abajo.
+
+## Instalación
+
+```bash
+cd backend
+npm install
+```
+
+Crear el archivo de variables de entorno:
+
+```powershell
+# Windows / PowerShell
+Copy-Item .env.example .env
+```
+
+```bash
+# Linux / macOS
+cp .env.example .env
+```
+
+Editar `.env`, completar `DATABASE_URL`, `JWT_SECRET` y las variables `ADMIN_*`. Luego aplicar migraciones y cargar los datos de ejemplo:
+
+```bash
+npx prisma migrate dev --name init
+npm run seed
+```
+
+Iniciar la API:
+
+```bash
+npm run dev
+```
+
+La API queda disponible en `http://localhost:3000/api`. Verificación rápida:
+
+```bash
+curl http://localhost:3000/api/health
+```
+
+### Frontend
+
+En otra terminal:
+
+```bash
+cd frontend
+npm install
+```
+
+Crear el archivo de variables de entorno y verificar la URL de la API:
+
+```powershell
+# Windows / PowerShell
+Copy-Item .env.example .env
+```
+
+```bash
+# Linux / macOS
+cp .env.example .env
+```
+
+Iniciar el servidor de desarrollo:
+
+```bash
+npm run dev
+```
+
+La aplicación queda disponible en `http://localhost:5173`. El mapa público se abre en `/`, el ranking en `/prioridades` y el ingreso en `/login`.
+
+### Variables de entorno
+
+| Variable | Obligatoria | Descripción |
+|---|---|---|
+| `DATABASE_URL` | Sí | Cadena de conexión de PostgreSQL. En Neon incluir `?sslmode=require`. |
+| `JWT_SECRET` | Sí | Clave aleatoria de al menos 32 caracteres para firmar los tokens JWT. |
+| `JWT_EXPIRES_IN` | No | Vigencia del token. Por defecto `7d`. |
+| `NODE_ENV` | No | `development` o `production`. En producción activa `trust proxy` para el rate limit detrás de Render. |
+| `PORT` | No | Puerto HTTP. Por defecto `3000`. |
+| `FRONTEND_URL` | No | Origen permitido por CORS. Admite varios separados por coma. En desarrollo también se aceptan `http://localhost:<puerto>`. |
+| `ADMIN_NOMBRE` | No | Nombre del administrador inicial. Por defecto `Administrador`. |
+| `ADMIN_EMAIL` | Sí (seed) | Email del administrador inicial. |
+| `ADMIN_PASSWORD` | Sí (seed) | Contraseña del administrador inicial. |
+| `PRIORIDAD_UMBRAL_KM` | No | Distancia máxima en km para sumar puntos por cercanía a puntos de interés. Por defecto `1`. |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | No | Necesarias para subir fotos. Sin ellas, `POST /api/fotos/firma` responde `503`. |
+
+El archivo `.env` nunca debe commitearse. `.env.example` no contiene secretos reales.
+
+El frontend usa una única variable, definida en `frontend/.env`:
+
+| Variable | Obligatoria | Descripción |
+|---|---|---|
+| `VITE_API_URL` | No | URL base de la API, incluido `/api`. Por defecto `http://localhost:3000/api`. En producción, la URL del backend en Render. |
+
+### Scripts
+
+Backend:
+
+| Comando | Descripción |
+|---|---|
+| `npm run dev` | Inicia la API con reinicio automático. |
+| `npm start` | Inicia la API en modo producción. |
+| `npm run prisma:generate` | Genera el cliente de Prisma. |
+| `npm run prisma:migrate` | Ejecuta `prisma migrate dev`. |
+| `npm run prisma:studio` | Abre Prisma Studio. |
+| `npm run seed` | Crea el ADMIN inicial, 3 caminos y 3 puntos de interés de ejemplo. |
+| `npm run ejemplos:importacion` | Regenera los archivos `.kml` y `.gpkg` de `ejemplos/` para probar la importación. |
+
+Frontend:
+
+| Comando | Descripción |
+|---|---|
+| `npm run dev` | Inicia Vite en modo desarrollo. |
+| `npm run build` | Genera la compilación de producción en `dist/`. |
+| `npm run preview` | Sirve localmente la compilación de producción. |
+
+## Autenticación
+
+- Los endpoints protegidos esperan el encabezado `Authorization: Bearer <token>`.
+- El token se obtiene con `POST /api/auth/login`.
+- Un usuario desactivado no puede autenticarse ni seguir usando un token emitido previamente.
+- Roles: `ADMIN` y `EDITOR`. El rol lector no requiere login.
+- En el frontend el token se guarda en `localStorage` (`caminos-rurales-token`). Al iniciar la aplicación se valida con `GET /api/auth/me`; si el token expiró o el usuario fue desactivado se cierra la sesión automáticamente.
+- Las rutas `/perfil` y `/sugerencias` requieren sesión (la segunda, rol EDITOR o ADMIN). `/usuarios` y `/auditoria` requieren rol ADMIN.
+
+Los errores tienen este formato:
+
+```json
+{
+  "mensaje": "Datos inválidos.",
+  "detalles": [
+    { "campo": "nombre", "mensaje": "El nombre es obligatorio." }
+  ]
+}
+```
+
+## Convenciones de la API
+
+- Respuestas exitosas: `{ "datos": ... }` para un recurso o listado, y `{ "mensaje": "..." }` para confirmaciones.
+- Listados: `{ "datos": [...] }`.
+- Coordenadas **siempre** en GeoJSON: `[longitud, latitud]` (EPSG:4326).
+- Fechas en formato ISO 8601.
+- Los ids son cadenas generadas con `cuid()`.
+
+### Enums
+
+| Enum | Valores |
+|---|---|
+| Rol | `ADMIN`, `EDITOR` |
+| Estado del tramo | `TRANSITABLE`, `REGULAR`, `INTRANSITABLE`, `EN_OBRA` |
+| Tipo de superficie | `TIERRA`, `RIPIO`, `ENRIPIADO_MEJORADO`, `PAVIMENTADO` |
+| Categoría de punto de interés | `HOSPITAL`, `ESCUELA`, `UPA` |
+| Estado de sugerencia | `PENDIENTE`, `REVISADA`, `DESCARTADA` |
+| Acción de auditoría | `CREAR`, `EDITAR`, `BORRAR` |
+
+## Endpoints
+
+**Roles:** Público = sin login · Autenticado = cualquier usuario activo · EDITOR = `EDITOR` o `ADMIN` · ADMIN = solo `ADMIN`.
+
+| Método | Ruta | Rol | Body | Respuesta |
+|---|---|---|---|---|
+| GET | `/api/health` | Público | — | `200 { estado: "ok", fecha }` |
+| GET | `/api/caminos` | Público | — (query: `q`, `departamento`, `activo`) | `200 { datos: Camino[] }` con `tramos` y `fotos` |
+| GET | `/api/caminos/:id` | Público | — | `200 { datos: Camino }` con `tramos` y `fotos` · `404` |
+| GET | `/api/tramos` | Público | — (query: `caminoId`, `estado`, `tipo`, `departamento`) | `200 { datos: Tramo[] }` con datos básicos del camino |
+| GET | `/api/tramos/prioridad` | Público | — | `200 { datos: TramoConPrioridad[] }` ordenados de mayor a menor puntaje |
+| GET | `/api/puntos-interes` | Público | — (query: `categoria`) | `200 { datos: PuntoInteres[] }` |
+| POST | `/api/sugerencias` | Público · máx. 5 cada 15 min por IP | `{ texto, contacto?, caminoId?, tramoId? }` | `201 { datos: { id, estado, creadoEn }, mensaje }` · `429` |
+| POST | `/api/auth/login` | Público | `{ email, password }` | `200 { datos: { token, usuario } }` · `401` |
+| GET | `/api/auth/me` | Autenticado | — | `200 { datos: Usuario }` · `401` |
+| POST | `/api/auth/change-password` | Autenticado | `{ passwordActual, passwordNueva }` | `200 { mensaje }` · `400` |
+| POST | `/api/caminos` | EDITOR | `{ nombre, localidad, departamento, descripcion?, activo? }` | `201 { datos: Camino, mensaje }` |
+| POST | `/api/caminos/importar` | EDITOR | Multipart: `archivo` (.kml/.gpkg) y `mapeo` opcional (JSON en texto) | `200 { datos: PrevisualizacionImportacion }` · `400` · `413` |
+| POST | `/api/caminos/importar/confirmar` | EDITOR | `{ features: [...], mapeo? }` | `201 { datos: { resumen, caminos, tramos }, mensaje }` · `400` / `404` |
+| PATCH | `/api/caminos/:id` | EDITOR | Cualquier subconjunto de los campos anteriores | `200 { datos: Camino, mensaje }` · `404` |
+| DELETE | `/api/caminos/:id` | EDITOR | — | `200 { mensaje }` · `404` |
+| POST | `/api/tramos` | EDITOR | `{ caminoId, geometria, estado, tipo, observaciones? }` | `201 { datos: Tramo, mensaje }` · `404` si el camino no existe |
+| PATCH | `/api/tramos/:id` | EDITOR | Cualquier subconjunto de `{ caminoId, geometria, estado, tipo, observaciones }` | `200 { datos: Tramo, mensaje }` · `404` |
+| PATCH | `/api/tramos/:id/dividir` | EDITOR | `{ desde, hasta, estado?, tipo?, observaciones? }` | `200 { datos: Tramo[] (2 o 3 segmentos), mensaje }` · `400` / `404` |
+| GET | `/api/tramos/:id/historial` | EDITOR | — | `200 { datos: HistorialTramo[] }` con usuario · `404` |
+| DELETE | `/api/tramos/:id` | EDITOR | — | `200 { mensaje }` · `404` |
+| POST | `/api/puntos-interes` | EDITOR | `{ nombre, categoria, latitud, longitud }` | `201 { datos: PuntoInteres, mensaje }` |
+| PATCH | `/api/puntos-interes/:id` | EDITOR | Cualquier subconjunto de los campos anteriores | `200 { datos: PuntoInteres, mensaje }` · `404` |
+| DELETE | `/api/puntos-interes/:id` | EDITOR | — | `200 { mensaje }` · `404` |
+| POST | `/api/fotos/firma` | EDITOR | — | `200 { datos: { cloudName, apiKey, timestamp, folder, firma, urlSubida } }` · `503` si Cloudinary no está configurado |
+| POST | `/api/fotos` | EDITOR | `{ url, descripcion?, caminoId, tramoId? }` | `201 { datos: Foto, mensaje }` · `400` / `404` |
+| DELETE | `/api/fotos/:id` | EDITOR | — | `200 { mensaje }` · `404` |
+| GET | `/api/sugerencias` | EDITOR | — (query: `estado`, `caminoId`) | `200 { datos: Sugerencia[] }` |
+| PATCH | `/api/sugerencias/:id` | EDITOR | `{ estado }` | `200 { datos: Sugerencia, mensaje }` · `404` |
+| GET | `/api/usuarios` | ADMIN | — | `200 { datos: Usuario[] }` |
+| POST | `/api/usuarios` | ADMIN | `{ nombre, email, password }` | `201 { datos: Usuario, mensaje }` · `409` si el email existe |
+| PATCH | `/api/usuarios/:id/estado` | ADMIN | `{ activo: boolean }` | `200 { datos: Usuario, mensaje }` · `400` si el usuario es ADMIN · `404` |
+| GET | `/api/auditoria` | ADMIN | — (query: `accion`, `entidad`, `usuarioId`, `desde`, `hasta`, `limite`) | `200 { datos: Auditoria[], total }` |
+
+Todos los endpoints protegidos devuelven `401` sin token válido y `403` si el rol no alcanza. Los errores de validación devuelven `400` con `detalles`.
+
+`DELETE /api/caminos/:id` es una baja definitiva (elimina en cascada sus tramos e historial). Para conservar los datos, usar `PATCH /api/caminos/:id` con `{ "activo": false }`.
+
+### Parámetros de consulta
+
+| Endpoint | Parámetro | Descripción |
+|---|---|---|
+| `GET /api/caminos` | `q` | Búsqueda parcial por nombre (sin distinguir mayúsculas). |
+| | `departamento` | Departamento exacto (sin distinguir mayúsculas). |
+| | `activo` | `true` o `false`. |
+| `GET /api/tramos` | `caminoId` | Filtra por camino. |
+| | `estado` | Estado del tramo. |
+| | `tipo` | Tipo de superficie. |
+| | `departamento` | Departamento del camino. |
+| `GET /api/puntos-interes` | `categoria` | `HOSPITAL`, `ESCUELA` o `UPA`. |
+| `GET /api/sugerencias` | `estado` | `PENDIENTE`, `REVISADA` o `DESCARTADA`. |
+| | `caminoId` | Filtra por camino. |
+| `GET /api/auditoria` | `accion` | `CREAR`, `EDITAR` o `BORRAR`. |
+| | `entidad` | Nombre de la entidad (`Camino`, `Tramo`, `PuntoInteres`, `Foto`, `Sugerencia`, `Usuario`). |
+| | `usuarioId` | Autor de la acción. |
+| | `desde`, `hasta` | Rango de fechas ISO 8601. |
+| | `limite` | Cantidad máxima de registros (1 a 500, por defecto 100). El total no se limita. |
+
+## Formato de los datos
+
+### Camino
+
+```json
+{
+  "id": "cm...",
+  "nombre": "Camino rural a Los Telares",
+  "localidad": "Los Telares",
+  "departamento": "Salavina",
+  "descripcion": "Vincula la planta urbana con los parajes del norte.",
+  "activo": true,
+  "creadoEn": "2026-10-19T12:00:00.000Z",
+  "actualizadoEn": "2026-10-19T12:00:00.000Z",
+  "tramos": [],
+  "fotos": []
+}
+```
+
+### Tramo
+
+```json
+{
+  "id": "cm...",
+  "caminoId": "cm...",
+  "geometria": {
+    "type": "LineString",
+    "coordinates": [[-63.43, -28.989], [-63.418, -28.997]]
+  },
+  "longitudKm": 1.536,
+  "estado": "EN_OBRA",
+  "tipo": "TIERRA",
+  "observaciones": "Trabajos de enripiado en ejecución.",
+  "creadoEn": "2026-10-19T12:00:00.000Z",
+  "actualizadoEn": "2026-10-19T12:00:00.000Z"
+}
+```
+
+La `longitudKm` se calcula en el backend con turf cada vez que se crea o edita la geometría.
+
+### Punto de interés
+
+```json
+{
+  "id": "cm...",
+  "nombre": "Hospital Zonal de Añatuya",
+  "categoria": "HOSPITAL",
+  "latitud": -28.46,
+  "longitud": -62.83,
+  "creadoEn": "2026-10-19T12:00:00.000Z",
+  "actualizadoEn": "2026-10-19T12:00:00.000Z"
+}
+```
+
+### Foto
+
+```json
+{
+  "id": "cm...",
+  "url": "https://res.cloudinary.com/.../image/upload/v.../caminos-rurales-sde/foto.jpg",
+  "descripcion": "Sector con anegamientos.",
+  "caminoId": "cm...",
+  "tramoId": "cm...",
+  "creadoEn": "2026-10-19T12:00:00.000Z"
+}
+```
+
+`tramoId` puede ser `null` cuando la foto pertenece solo al camino.
+
+### HistorialTramo
+
+```json
+{
+  "id": "cm...",
+  "tramoId": "cm...",
+  "usuarioId": "cm...",
+  "usuario": { "id": "cm...", "nombre": "Editor", "email": "editor@ejemplo.com" },
+  "estadoAnterior": "REGULAR",
+  "tipoAnterior": "TIERRA",
+  "geometriaAnterior": { "type": "LineString", "coordinates": [[-63.44, -28.98], [-63.43, -28.99]] },
+  "estadoNuevo": "TRANSITABLE",
+  "tipoNuevo": "ENRIPIADO_MEJORADO",
+  "geometriaNuevo": { "type": "LineString", "coordinates": [[-63.44, -28.98], [-63.43, -28.99]] },
+  "fecha": "2026-10-19T12:00:00.000Z"
+}
+```
+
+`usuario` es `null` si la cuenta fue eliminada. Solo se registra una entrada cuando cambia el estado, el tipo o la geometría.
+
+### Usuario
+
+```json
+{
+  "id": "cm...",
+  "nombre": "Editor",
+  "email": "editor@ejemplo.com",
+  "rol": "EDITOR",
+  "activo": true,
+  "creadoEn": "2026-10-19T12:00:00.000Z",
+  "actualizadoEn": "2026-10-19T12:00:00.000Z"
+}
+```
+
+Nunca se devuelve `passwordHash`.
+
+## División de tramos
+
+`PATCH /api/tramos/:id/dividir` recibe dos puntos GeoJSON:
+
+```json
+{
+  "desde": [-63.441, -28.981],
+  "hasta": [-63.43, -28.989],
+  "estado": "TRANSITABLE",
+  "tipo": "ENRIPIADO_MEJORADO",
+  "observaciones": "Segmento reparado en 2026."
+}
+```
+
+Procedimiento:
+
+1. Los puntos se ajustan a la línea con `nearestPointOnLine` y se ordenan según su posición.
+2. Se generan hasta tres segmentos con `lineSlice`: inicial, central y final.
+3. El **estado y el tipo nuevos se aplican solo al segmento central**. Los extremos conservan estado, tipo y observaciones del tramo original.
+4. El tramo original se conserva como segmento inicial (o como central si `desde` coincide con el comienzo de la línea). Los segmentos nuevos se crean como tramos independientes, sin unir geometrías.
+5. Si se omite `estado` o `tipo`, el segmento central hereda el valor original.
+6. Se registra el historial del tramo original y una entrada de auditoría por cada segmento afectado.
+
+Respuesta: `200 { datos: [Tramo, Tramo, ...], mensaje }`. Devuelve `400` si los puntos están a menos de 1 metro o si el segmento abarca todo el tramo (no habría división real).
+
+## Carga de fotos
+
+La subida es **firmada desde el backend** y el archivo no pasa por la API:
+
+1. El editor pide la firma con `POST /api/fotos/firma`.
+2. El frontend envía el archivo directamente a `urlSubida` (`https://api.cloudinary.com/v1_1/<cloud>/image/upload`) con los campos `file`, `api_key`, `timestamp`, `folder` y `signature`.
+3. Cloudinary devuelve `secure_url`.
+4. El frontend registra solo la URL con `POST /api/fotos`, indicando `caminoId` y, opcionalmente, `tramoId`.
+5. En la base se guarda la URL; Cloudinary conserva el archivo.
+
+La firma es un SHA-1 de `folder=<carpeta>&timestamp=<ts>` concatenado con `CLOUDINARY_API_SECRET`. La carpeta utilizada es `caminos-rurales-sde`. El frontend valida un tamaño máximo de 10 MB antes de subir.
+
+`DELETE /api/fotos/:id` elimina el registro de la base. El archivo original no se borra de Cloudinary.
+
+## Importación de relevamientos
+
+Los editores pueden cargar archivos generados en QGIS. El flujo tiene dos pasos: **previsualización** (no guarda nada) y **confirmación** (crea caminos y tramos).
+
+### Formatos aceptados
+
+| Formato | Extensión | Lectura | Sistema de coordenadas |
+|---|---|---|---|
+| KML | `.kml` | `@tmcw/togeojson` | EPSG:4326 (por especificación) |
+| GeoPackage | `.gpkg` | `@ngageoint/geopackage` | El declarado en cada capa; se reproyecta a EPSG:4326 |
+
+- Tamaño máximo: **25 MB**.
+- Se aceptan `LineString` y `MultiLineString`. En un GeoPackage también se recorren las `GeometryCollection` que contengan líneas.
+- Cada parte de un `MultiLineString` se convierte en un tramo independiente, **sin unir** las partes. Todas las partes de una misma feature comparten el camino creado.
+- Si una coordenada trae una tercera dimensión (altitud, habitual en los KML exportados desde QGIS), se conserva solo `[longitud, latitud]`.
+- Puntos y polígonos se descartan y se informan en `advertencias` y `descartados`.
+- Si el GPKG tiene varias capas, se leen todas.
+- La reproyección usa la definición WKT del SRS de cada capa. Si la capa declara un SRS distinto de EPSG:4326 y no incluye definición, la importación se rechaza con `400`.
+- Máximo **2000 tramos** por archivo y por confirmación.
+
+Para KML, un `MultiLineString` se representa con `<MultiGeometry>` y varios `<LineString>` (KML no tiene un elemento `MultiLineString`).
+
+### Atributos reconocidos
+
+Los nombres de campo y los valores se comparan sin distinguir mayúsculas, acentos ni separadores. La previsualización devuelve todos los atributos encontrados y una sugerencia para cada tramo.
+
+| Campo del dominio | Atributos habituales | Valores reconocidos |
+|---|---|---|
+| Nombre del camino | `nombre`, `name`, `camino`, `ruta`, `denominacion`, `via`, `tramo` | Texto libre |
+| Localidad | `localidad`, `municipio`, `pueblo`, `paraje`, `ciudad` | Texto libre |
+| Departamento | `departamento`, `dpto`, `depto`, `partido` | Texto libre |
+| Estado | `estado`, `estado_camino`, `estado_via`, `condicion`, `transitabilidad`, `situacion` | `transitable`/`bueno`, `regular`, `intransitable`/`malo`, `en_obra`/`obra` |
+| Superficie | `tipo`, `tipo_camino`, `tipo_superficie`, `superficie`, `material`, `calzada` | `tierra`, `ripio`/`grava`, `enripiado`/`mejorado`, `pavimentado`/`asfalto` |
+
+Si no hay coincidencia se usa `REGULAR` y `TIERRA` como valores por defecto.
+
+### Mapeo configurable
+
+`mapeo` es opcional y permite indicar qué atributo usar y cómo traducir sus valores:
+
+```json
+{
+  "estado": {
+    "campo": "estado_relevado",
+    "valores": { "muy malo": "INTRANSITABLE", "aceptable": "REGULAR" },
+    "porDefecto": "REGULAR"
+  },
+  "tipo": {
+    "campo": "material_calzada",
+    "valores": { "suelo natural": "TIERRA", "mejorado": "ENRIPIADO_MEJORADO" },
+    "porDefecto": "TIERRA"
+  }
+}
+```
+
+En la previsualización se envía como campo de texto `mapeo` del formulario multipart. En la confirmación va dentro del JSON. Las claves de `valores` se normalizan igual que los atributos. El mapeo del backend se aplica si la feature no trae `estado` o `tipo` explícitos; la pantalla de importación permite elegir el campo y el valor por defecto y vuelve a analizar el archivo.
+
+### Previsualización
+
+`POST /api/caminos/importar` recibe `multipart/form-data` con:
+
+- `archivo`: el `.kml` o `.gpkg` (obligatorio).
+- `mapeo`: JSON opcional como texto.
+
+No guarda nada. Devuelve `{ datos: PrevisualizacionImportacion }`:
+
+```json
+{
+  "datos": {
+    "archivo": "relevamiento.gpkg",
+    "formato": "GPKG",
+    "capas": ["caminos_relevados", "caminos_mercator"],
+    "sistemasCoordenadas": ["EPSG:4326", "EPSG:3857"],
+    "reproyectado": true,
+    "total": 4,
+    "descartados": 1,
+    "advertencias": ["Se descartaron 1 elemento(s) sin geometría de línea..."],
+    "clavesAtributos": ["id", "nombre", "estado", "superficie"],
+    "features": [
+      {
+        "id": "caminos_relevados-2-1",
+        "origen": "caminos_relevados-2",
+        "grupo": "caminos_relevados-2",
+        "capa": "caminos_relevados",
+        "nombre": "Camino a Los Telares",
+        "parte": 1,
+        "partes": 2,
+        "tipoGeometria": "LineString",
+        "tipoGeometriaOriginal": "MultiLineString",
+        "longitudKm": 0.739,
+        "atributos": { "id": 2, "nombre": "Camino a Los Telares", "estado": "Malo", "superficie": "Ripio" },
+        "geometria": { "type": "LineString", "coordinates": [[-63.45, -28.98], [-63.445, -28.975]] },
+        "estadoSugerido": "INTRANSITABLE",
+        "tipoSugerido": "RIPIO",
+        "localidadSugerida": "Los Telares",
+        "departamentoSugerido": "Salavina"
+      }
+    ]
+  }
+}
+```
+
+### Confirmación
+
+`POST /api/caminos/importar/confirmar` recibe solo las features aprobadas:
+
+```json
+{
+  "features": [
+    {
+      "id": "caminos_relevados-2-1",
+      "grupo": "caminos_relevados-2",
+      "nombre": "Camino a Los Telares",
+      "localidad": "Los Telares",
+      "departamento": "Salavina",
+      "estado": "INTRANSITABLE",
+      "tipo": "RIPIO",
+      "observaciones": null,
+      "geometria": { "type": "LineString", "coordinates": [[-63.45, -28.98], [-63.445, -28.975]] }
+    }
+  ]
+}
+```
+
+- `nombre`, `localidad` y `departamento` son obligatorios.
+- `grupo` agrupa varios tramos en un mismo camino (se usa para las partes de un MultiLineString). Si se omite, cada feature crea su propio camino. La pantalla de importación permite asignar un mismo `grupo` a varios tramos para guardarlos como tramos de un único camino (por ejemplo, los 10 tramos de una ruta).
+- `caminoId` es opcional: en lugar de crear un camino, agrega el tramo a uno existente.
+- `geometria` debe ser un `LineString` en EPSG:4326. La longitud se recalcula en el backend con turf; no se confía en el valor de la previsualización.
+- La operación es transaccional: si falla una feature no se guarda ninguna. Se registra auditoría `CREAR` por cada camino y tramo.
+
+Respuesta: `201 { datos: { resumen, caminos, tramos }, mensaje }`.
+
+```json
+{
+  "datos": {
+    "resumen": { "caminosCreados": 1, "tramosCreados": 2, "longitudTotalKm": 2.216 },
+    "caminos": [{ "id": "cm...", "nombre": "Camino a Los Telares", "localidad": "Los Telares", "departamento": "Salavina" }],
+    "tramos": [{ "id": "cm...", "caminoId": "cm...", "estado": "INTRANSITABLE", "tipo": "RIPIO", "longitudKm": 0.739 }]
+  },
+  "mensaje": "Se importaron 2 tramo(s) en 1 camino(s)."
+}
+```
+
+### Errores frecuentes
+
+| Situación | Respuesta |
+|---|---|
+| Archivo vacío o extensión distinta de `.kml`/`.gpkg` | `400` |
+| Archivo mayor a 25 MB | `413` |
+| KML mal formado o sin raíz `<kml>` | `400` |
+| GPKG corrupto o que no es SQLite | `400` |
+| GPKG sin tablas de entidades | `400` |
+| No hay ninguna geometría de línea | `400` |
+| SRS distinto de EPSG:4326 sin definición WKT | `400` |
+| Más de 2000 tramos | `400` |
+| Confirmación sin features o con campos obligatorios vacíos | `400` |
+
+### Archivos de ejemplo
+
+En `backend/ejemplos/` hay dos archivos listos para probar:
+
+- `relevamiento-ejemplo.kml`: `LineString` + `MultiGeometry` con dos `LineString` y atributos `estado`, `superficie`, `localidad` y `departamento`.
+- `relevamiento-ejemplo.gpkg`: capa en EPSG:4326 con `LineString`, `MultiLineString` y un polígono descartable, más una capa en EPSG:3857 para comprobar la reproyección.
+
+Se regeneran con `npm run ejemplos:importacion` desde `backend/`.
+
+## Prioridad de tramos
+
+`GET /api/tramos/prioridad` calcula el puntaje de cada tramo en el momento de la consulta y devuelve el listado ordenado de mayor a menor. En caso de empate, ordena por nombre del camino.
+
+La fórmula vive en `backend/src/services/prioridad.js` y sus pesos se pueden ajustar sin tocar el controlador:
+
+| Componente | Pesos | Máximo |
+|---|---|---|
+| Estado del tramo | `INTRANSITABLE` 50 · `REGULAR` 25 · `EN_OBRA` 10 · `TRANSITABLE` 0 | 50 |
+| Tipo de superficie | `TIERRA` 20 · `RIPIO` 12 · `ENRIPIADO_MEJORADO` 6 · `PAVIMENTADO` 0 | 20 |
+| Cercanía a puntos de interés | `HOSPITAL` +30 · `UPA` +20 · `ESCUELA` +15 | 30 |
+
+La cercanía se calcula con `@turf/turf` (`pointToLineDistance`) entre la geometría del tramo y cada punto de interés. Solo suman los puntos ubicados a `PRIORIDAD_UMBRAL_KM` o menos (1 km por defecto). El aporte por cercanía se limita a 30 puntos y el total a 100.
+
+Cada elemento de la respuesta incluye los datos del tramo, los datos básicos del camino y el desglose del puntaje:
+
+```json
+{
+  "datos": [
+    {
+      "id": "cm...",
+      "caminoId": "cm...",
+      "geometria": { "type": "LineString", "coordinates": [[-63.45, -28.97], [-63.44, -28.98]] },
+      "longitudKm": 1.35,
+      "estado": "INTRANSITABLE",
+      "tipo": "TIERRA",
+      "observaciones": "Sector sin mantenimiento.",
+      "creadoEn": "2026-10-19T12:00:00.000Z",
+      "actualizadoEn": "2026-10-19T12:00:00.000Z",
+      "camino": {
+        "id": "cm...",
+        "nombre": "Camino rural a Los Telares",
+        "localidad": "Los Telares",
+        "departamento": "Salavina"
+      },
+      "prioridad": {
+        "puntaje": 100,
+        "estado": 50,
+        "tipo": 20,
+        "cercania": 30,
+        "umbralCercaniaKm": 1,
+        "puntosCercanos": [
+          {
+            "id": "cm...",
+            "nombre": "Hospital Zonal de Añatuya",
+            "categoria": "HOSPITAL",
+            "distanciaKm": 0.42,
+            "aporte": 30
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+## Frontend
+
+### Páginas
+
+| Ruta | Acceso | Descripción |
+|---|---|---|
+| `/` | Público | Mapa a pantalla completa. Para EDITOR y ADMIN suma las herramientas de edición. |
+| `/prioridades` | Público | Ranking de tramos por puntaje, con filtros y acceso al mapa. |
+| `/login` | Público | Formulario de ingreso con email y contraseña. |
+| `/perfil` | Autenticado | Datos de la cuenta y cambio de contraseña. |
+| `/sugerencias` | EDITOR / ADMIN | Revisión de sugerencias ciudadanas. |
+| `/importar` | EDITOR / ADMIN | Carga de `.kml`/`.gpkg`, previsualización en el mapa y confirmación de la importación. |
+| `/usuarios` | ADMIN | Alta de editores y activación/desactivación. |
+| `/auditoria` | ADMIN | Registro de acciones con filtros. |
+
+El encabezado cambia según la sesión y el rol: el lector ve Mapa y Prioridades; el editor suma Sugerencias e Importar; el administrador suma Usuarios y Auditoría. El menú de usuario da acceso a Mi perfil y Cerrar sesión. En móvil las secciones se agrupan en el menú desplegable.
+
+### Mapa público
+
+Mapa de pantalla completa con OpenStreetMap, panel de filtros por estado, superficie, departamento y búsqueda por nombre; selector "Colorear por" estado o superficie (por defecto, estado); leyenda; marcadores de hospitales, escuelas y UPAs con visibilidad independiente. Al hacer clic en un tramo se muestra un popup con el camino, localidad, longitud del tramo y total del camino, estado, superficie, puntaje de prioridad, fotos y el formulario **Sugerir un cambio** (`POST /api/sugerencias`).
+
+### Edición en el mapa
+
+Con sesión de EDITOR o ADMIN aparece la barra **Edición** en el mapa:
+
+- **Caminos:** abre la lista de caminos existentes, incluso los que no tienen tramos, para editar sus datos, dibujar un tramo nuevo o eliminarlos.
+- **Nuevo camino:** formulario con nombre, localidad, departamento, descripción y estado activo. Al crearlo se abre directamente el formulario para dibujar su primer tramo.
+- **Dibujar tramo:** se eligen camino, estado, superficie y observaciones; después se hace clic en el mapa para agregar vértices. El panel inferior permite deshacer el último punto, cancelar o terminar el tramo. Se requieren al menos dos puntos.
+- **Editar tramo y camino:** al hacer clic en un tramo, el popup incluye el botón para abrir el panel lateral. Desde ahí se editan los datos del camino, el estado, la superficie y las observaciones del tramo; también se accede a las fotos, al historial y a las bajas.
+- **Dividir / reclasificar:** se tocan el punto inicial y el final sobre la línea del tramo (el punto se ajusta a la línea más cercana). Luego se elige estado, superficie y observaciones del segmento central y se aplica `PATCH /api/tramos/:id/dividir`. Los extremos conservan sus valores originales.
+- **Puntos de interés:** con **Nuevo punto** se hace clic en el mapa y se completa nombre y categoría. Desde el popup del marcador se pueden editar o eliminar.
+- **Fotos:** el panel del tramo permite subir imágenes a Cloudinary y eliminarlas de la base.
+- **Historial:** el panel del tramo muestra los cambios de estado, superficie y geometría con fecha y usuario.
+- Las bajas de caminos, tramos y fotos piden confirmación antes de ejecutarse.
+
+### Importación desde QGIS
+
+La pantalla `/importar` (EDITOR o ADMIN) permite:
+
+1. Elegir un `.kml` o `.gpkg` de hasta 25 MB y pedir la previsualización.
+2. Revisar formato, capas, sistemas de coordenadas, advertencias y cantidad de elementos descartados.
+3. Configurar el mapeo de estado y superficie (campo del archivo y valor por defecto) y volver a analizar.
+4. Ver todas las líneas en el mapa: las seleccionadas se colorean según estado y superficie; las excluidas quedan grises. Un clic en una línea la incluye o excluye.
+5. Completar la localidad y el departamento en **Datos comunes** y aplicarlos a los tramos seleccionados o a todos, en lugar de cargarlos uno por uno. Ahí también se puede asignar un nombre común y tildar **Unificar en un solo camino** para que varios tramos (por ejemplo, los 10 tramos de una ruta) queden como tramos de un mismo camino.
+6. Ajustar por tramo el nombre del camino, la localidad, el departamento, el estado y la superficie. En las partes de un MultiLineString y en los tramos unificados, el nombre, la localidad y el departamento se comparten.
+7. Confirmar: solo se envían los tramos tildados. Al terminar se muestra el resumen y el acceso al mapa.
+
+La previsualización no guarda nada. Los polígonos y puntos se descartan y se avisa en la pantalla.
+
+Las rutas protegidas redirigen a `/login` y, después del ingreso, vuelven a la página solicitada. Si el rol no alcanza se muestra un aviso de acceso restringido.
+
+### Temas y diseño
+
+Al colorear por estado, la superficie se distingue por el trazo de la línea (punteada, guiones largos, guion y punto o continua). Al colorear por superficie, cada tipo usa su propio color. Todos los tramos llevan un contorno que sigue el mismo trazo: oscuro sobre el mapa claro y claro sobre el mapa oscuro, para que se distingan mejor del fondo.
+
+El tema claro/oscuro se guarda en `localStorage` y respeta la preferencia inicial del sistema. La interfaz es responsive, con panel de filtros desplegable en móvil.
+
+Verificación de la compilación de producción:
+
+```bash
+cd frontend
+npm run build
+```
+
+## Historial y auditoría
+
+- **HistorialTramo:** se registra automáticamente cuando un `PATCH /api/tramos/:id` (o una división) modifica `estado`, `tipo` o `geometria`. Guarda valores anteriores y nuevos, usuario y fecha. Si se elimina el tramo, su historial se elimina en cascada; si se elimina el usuario, el historial se conserva sin usuario.
+- **Auditoría:** se registra en las altas, ediciones y bajas disponibles de caminos, tramos, fotos, puntos de interés, sugerencias y usuarios, además del cambio de contraseña. Las sugerencias enviadas por ciudadanos se auditan con usuario nulo. Guarda usuario, acción, entidad, id, detalle, IP y fecha.
+- El historial de un tramo se consulta con `GET /api/tramos/:id/historial` (EDITOR o ADMIN) y se muestra en el panel de edición. La auditoría se consulta con rol `ADMIN` y filtros por usuario, acción, entidad y rango de fechas.
+
+## Datos de ejemplo
+
+`npm run seed` crea:
+
+- Un usuario `ADMIN` con los valores de `ADMIN_NOMBRE`, `ADMIN_EMAIL` y `ADMIN_PASSWORD`.
+- Tres caminos en los departamentos Atamisqui, Salavina y General Taboada.
+- Seis tramos que cubren los cuatro estados (`TRANSITABLE`, `REGULAR`, `INTRANSITABLE`, `EN_OBRA`) y los cuatro tipos de superficie.
+- Tres puntos de interés de ejemplo (hospital, escuela y UPA) cercanos a los tramos para probar los marcadores y el cálculo de prioridad.
+
+El seed es idempotente: no duplica el usuario, los caminos ni los puntos de interés si ya existen. Si el ADMIN ya existe, no se sobrescribe su contraseña.
+
+## Importación y datos reales
+
+La importación de relevamientos hechos en QGIS (`.kml` y `.gpkg`) está implementada en esta etapa. Ver [Importación de relevamientos](#importación-de-relevamientos) para el formato esperado, el mapeo de atributos y los archivos de ejemplo.

@@ -1,0 +1,81 @@
+import { prisma } from '../config/prisma.js';
+import { registrarAuditoria } from '../services/auditoria.service.js';
+import { ApiError } from '../utils/ApiError.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+
+export const listar = asyncHandler(async (req, res) => {
+  const { categoria } = req.consulta;
+
+  const puntos = await prisma.puntoInteres.findMany({
+    where: categoria ? { categoria } : {},
+    orderBy: { nombre: 'asc' },
+  });
+
+  res.json({ datos: puntos });
+});
+
+export const crear = asyncHandler(async (req, res) => {
+  const punto = await prisma.puntoInteres.create({ data: req.body });
+
+  await registrarAuditoria({
+    usuarioId: req.usuario.id,
+    accion: 'CREAR',
+    entidad: 'PuntoInteres',
+    entidadId: punto.id,
+    detalle: { nombre: punto.nombre, categoria: punto.categoria },
+    ip: req.ip,
+  });
+
+  res.status(201).json({ datos: punto, mensaje: 'Punto de interés creado correctamente.' });
+});
+
+export const actualizar = asyncHandler(async (req, res) => {
+  const existente = await prisma.puntoInteres.findUnique({
+    where: { id: req.params.id },
+    select: { id: true },
+  });
+
+  if (!existente) {
+    throw new ApiError(404, 'Punto de interés no encontrado.');
+  }
+
+  const punto = await prisma.puntoInteres.update({
+    where: { id: req.params.id },
+    data: req.body,
+  });
+
+  await registrarAuditoria({
+    usuarioId: req.usuario.id,
+    accion: 'EDITAR',
+    entidad: 'PuntoInteres',
+    entidadId: punto.id,
+    detalle: { campos: Object.keys(req.body) },
+    ip: req.ip,
+  });
+
+  res.json({ datos: punto, mensaje: 'Punto de interés actualizado correctamente.' });
+});
+
+export const eliminar = asyncHandler(async (req, res) => {
+  const punto = await prisma.puntoInteres.findUnique({
+    where: { id: req.params.id },
+    select: { id: true, nombre: true },
+  });
+
+  if (!punto) {
+    throw new ApiError(404, 'Punto de interés no encontrado.');
+  }
+
+  await prisma.puntoInteres.delete({ where: { id: req.params.id } });
+
+  await registrarAuditoria({
+    usuarioId: req.usuario.id,
+    accion: 'BORRAR',
+    entidad: 'PuntoInteres',
+    entidadId: punto.id,
+    detalle: { nombre: punto.nombre },
+    ip: req.ip,
+  });
+
+  res.json({ mensaje: 'Punto de interés eliminado correctamente.' });
+});
