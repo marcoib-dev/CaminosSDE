@@ -114,6 +114,16 @@ export default function MapaPage() {
     cargar();
   }, [cargar]);
 
+  // Precarga en background de puntos de interés (después de que el mapa esté listo)
+  useEffect(() => {
+    if (cargando || poisCargados) return;
+    // Pequeño delay para no competir con la carga inicial
+    const timer = setTimeout(() => {
+      cargarPuntos();
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [cargando, poisCargados, cargarPuntos]);
+
   useEffect(() => {
     if (!mensaje) return undefined;
     const temporizador = window.setTimeout(() => setMensaje(''), MENSAJE_DURACION_MS);
