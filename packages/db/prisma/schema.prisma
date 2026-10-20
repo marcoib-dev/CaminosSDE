@@ -1,0 +1,362 @@
+// Sistema de Información Provincial — esquema core + vialidad.
+// Las geometrías viven en PostGIS; Prisma las declara como Unsupported
+// y los repositorios acceden a ellas con SQL parametrizado.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["core", "vialidad"]
+}
+
+enum Rol {
+  ADMIN
+  EDITOR
+
+  @@schema("core")
+}
+
+enum AccionAuditoria {
+  CREAR
+  EDITAR
+  BORRAR
+  IMPORTAR
+  LOGIN
+
+  @@schema("core")
+}
+
+enum EstadoSugerencia {
+  PENDIENTE
+  REVISADA
+  DESCARTADA
+
+  @@schema("vialidad")
+}
+
+enum TipoMantenimiento {
+  PREVENTIVO
+  CORRECTIVO
+  MEJORA
+  OTRO
+
+  @@schema("vialidad")
+}
+
+enum TipoInfraestructura {
+  ALCANTARILLA
+  PUENTE
+  TAPA
+
+  @@schema("vialidad")
+}
+
+// ───────────────────────────── core ─────────────────────────────
+
+model Usuario {
+  id                   String           @id @default(cuid())
+  nombre               String
+  email                String           @unique
+  passwordHash         String
+  rol                  Rol              @default(EDITOR)
+  activo               Boolean          @default(true)
+  creadoEn             DateTime         @default(now())
+  actualizadoEn        DateTime         @updatedAt
+  historial            HistorialTramo[]
+  auditorias           Auditoria[]
+  sugerenciasRevisadas Sugerencia[]     @relation("SugerenciaRevisor")
+  mantenimientos       Mantenimiento[]
+  refreshTokens        RefreshToken[]
+
+  @@index([rol])
+  @@index([activo])
+  @@schema("core")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  expiraEn  DateTime
+  revocado  Boolean  @default(false)
+  creadoEn  DateTime @default(now())
+
+  @@index([usuarioId])
+  @@index([expiraEn])
+  @@schema("core")
+}
+
+model Departamento {
+  id            String    @id @default(cuid())
+  nombre        String    @unique
+  codigoIndec   String?
+  geom          Unsupported("geometry(Geometry, 4326)")?
+  creadoEn      DateTime  @default(now())
+  actualizadoEn DateTime  @updatedAt
+  caminos       Camino[]
+
+  @@schema("core")
+}
+
+model Capa {
+  id        String        @id @default(cuid())
+  clave     String        @unique
+  nombre    String
+  organismo String
+  activa    Boolean       @default(true)
+  creadoEn  DateTime      @default(now())
+  permisos  PermisoCapa[]
+
+  @@schema("core")
+}
+
+model PermisoCapa {
+  id          String  @id @default(cuid())
+  rol         Rol
+  capaId      String
+  capa        Capa    @relation(fields: [capaId], references: [id], onDelete: Cascade)
+  puedeVer    Boolean @default(true)
+  puedeCrear  Boolean @default(false)
+  puedeEditar Boolean @default(false)
+  puedeBorrar Boolean @default(false)
+
+  @@unique([rol, capaId])
+  @@index([rol])
+  @@schema("core")
+}
+
+model Auditoria {
+  id        String          @id @default(cuid())
+  usuarioId String?
+  usuario   Usuario?        @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  accion    AccionAuditoria
+  entidad   String
+  entidadId String?
+  detalle   Json?
+  ip        String?
+  fecha     DateTime        @default(now())
+
+  @@index([fecha])
+  @@index([entidad])
+  @@index([usuarioId])
+  @@schema("core")
+}
+
+model OperacionSync {
+  id          String   @id @default(cuid())
+  operacionId String   @unique
+  usuarioId   String?
+  tipo        String
+  resultado   Json?
+  creadoEn    DateTime @default(now())
+
+  @@index([creadoEn])
+  @@schema("core")
+}
+
+model CategoriaPunto {
+  id            String         @id @default(cuid())
+  clave         String         @unique
+  nombre        String
+  color         String         @default("#0e7490")
+  inicial       String
+  peso          Int            @default(10)
+  orden         Int            @default(100)
+  protegida     Boolean        @default(false)
+  creadoEn      DateTime       @default(now())
+  actualizadoEn DateTime       @updatedAt
+  puntos        PuntoInteres[]
+
+  @@index([orden])
+  @@schema("core")
+}
+
+model PuntoInteres {
+  id             String         @id @default(cuid())
+  nombre         String
+  categoria      String
+  categoriaPunto CategoriaPunto @relation(fields: [categoria], references: [clave], onUpdate: Cascade, onDelete: Restrict)
+  latitud        Float
+  longitud       Float
+  geom           Unsupported("geometry(Point, 4326)")?
+  creadoEn       DateTime       @default(now())
+  actualizadoEn  DateTime       @updatedAt
+
+  @@index([categoria])
+  @@schema("core")
+}
+
+// ─────────────────────────── vialidad ───────────────────────────
+
+model TipoVia {
+  id            String    @id @default(cuid())
+  clave         String    @unique
+  nombre        String
+  descripcion   String?
+  orden         Int       @default(100)
+  activo        Boolean   @default(true)
+  creadoEn      DateTime  @default(now())
+  actualizadoEn DateTime  @updatedAt
+  caminos       Camino[]
+
+  @@schema("vialidad")
+}
+
+model EstadoTramo {
+  id            String           @id @default(cuid())
+  clave         String           @unique
+  nombre        String
+  colorHex      String
+  orden         Int              @default(100)
+  activo        Boolean          @default(true)
+  creadoEn      DateTime         @default(now())
+  actualizadoEn DateTime         @updatedAt
+  tramos        Tramo[]
+  historialA    HistorialTramo[] @relation("EstadoAnterior")
+  historialB    HistorialTramo[] @relation("EstadoNuevo")
+
+  @@schema("vialidad")
+}
+
+model Camino {
+  id             String           @id @default(cuid())
+  nombre         String
+  localidad      String
+  tipoViaId      String
+  tipoVia        TipoVia          @relation(fields: [tipoViaId], references: [id], onDelete: Restrict)
+  departamentoId String?
+  departamento   Departamento?    @relation(fields: [departamentoId], references: [id], onDelete: SetNull)
+  descripcion    String?
+  activo         Boolean          @default(true)
+  geom           Unsupported("geometry(LineString, 4326)")?
+  longitudKm     Float            @default(0)
+  version        Int              @default(1)
+  creadoEn       DateTime         @default(now())
+  actualizadoEn  DateTime         @updatedAt
+  tramos         Tramo[]
+  fotos          Foto[]
+  sugerencias    Sugerencia[]
+  infraestructura Infraestructura[]
+
+  @@index([departamentoId])
+  @@index([tipoViaId])
+  @@index([activo])
+  @@index([nombre])
+  @@schema("vialidad")
+}
+
+model Tramo {
+  id             String          @id @default(cuid())
+  caminoId       String
+  camino         Camino          @relation(fields: [caminoId], references: [id], onDelete: Cascade)
+  geom           Unsupported("geometry(LineString, 4326)")?
+  longitudKm     Float
+  estadoId       String
+  estado         EstadoTramo     @relation(fields: [estadoId], references: [id], onDelete: Restrict)
+  observaciones  String?
+  version        Int             @default(1)
+  creadoEn       DateTime        @default(now())
+  actualizadoEn  DateTime        @updatedAt
+  historial      HistorialTramo[]
+  fotos          Foto[]
+  mantenimientos Mantenimiento[]
+  sugerencias    Sugerencia[]
+
+  @@index([caminoId])
+  @@index([estadoId])
+  @@schema("vialidad")
+}
+
+model HistorialTramo {
+  id                String       @id @default(cuid())
+  tramoId           String
+  tramo             Tramo        @relation(fields: [tramoId], references: [id], onDelete: Cascade)
+  usuarioId         String?
+  usuario           Usuario?     @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  estadoAnteriorId  String
+  estadoAnterior    EstadoTramo  @relation("EstadoAnterior", fields: [estadoAnteriorId], references: [id])
+  estadoNuevoId     String
+  estadoNuevo       EstadoTramo  @relation("EstadoNuevo", fields: [estadoNuevoId], references: [id])
+  geometriaAnterior Json?
+  geometriaNuevo    Json?
+  fecha             DateTime     @default(now())
+
+  @@index([tramoId])
+  @@index([fecha])
+  @@schema("vialidad")
+}
+
+model Mantenimiento {
+  id            String            @id @default(cuid())
+  tramoId       String
+  tramo         Tramo             @relation(fields: [tramoId], references: [id], onDelete: Cascade)
+  tipo          TipoMantenimiento
+  descripcion   String?
+  fecha         DateTime
+  costo         Float?
+  usuarioId     String?
+  usuario       Usuario?          @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  creadoEn      DateTime          @default(now())
+  fotos         Foto[]
+
+  @@index([tramoId])
+  @@index([fecha])
+  @@schema("vialidad")
+}
+
+model Foto {
+  id              String         @id @default(cuid())
+  url             String
+  descripcion     String?
+  caminoId        String
+  camino          Camino         @relation(fields: [caminoId], references: [id], onDelete: Cascade)
+  tramoId         String?
+  tramo           Tramo?         @relation(fields: [tramoId], references: [id], onDelete: Cascade)
+  mantenimientoId String?
+  mantenimiento   Mantenimiento? @relation(fields: [mantenimientoId], references: [id], onDelete: SetNull)
+  creadoEn        DateTime       @default(now())
+
+  @@index([caminoId])
+  @@index([tramoId])
+  @@index([mantenimientoId])
+  @@schema("vialidad")
+}
+
+model Infraestructura {
+  id          String              @id @default(cuid())
+  tipo        TipoInfraestructura
+  geom        Unsupported("geometry(Point, 4326)")
+  descripcion String?
+  caminoId    String?
+  camino      Camino?             @relation(fields: [caminoId], references: [id], onDelete: SetNull)
+  creadoEn    DateTime            @default(now())
+
+  @@index([caminoId])
+  @@index([tipo])
+  @@schema("vialidad")
+}
+
+model Sugerencia {
+  id            String           @id @default(cuid())
+  texto         String
+  contacto      String?
+  estado        EstadoSugerencia @default(PENDIENTE)
+  caminoId      String?
+  camino        Camino?          @relation(fields: [caminoId], references: [id], onDelete: SetNull)
+  tramoId       String?
+  tramo         Tramo?           @relation(fields: [tramoId], references: [id], onDelete: SetNull)
+  revisadoPorId String?
+  revisadoPor   Usuario?         @relation("SugerenciaRevisor", fields: [revisadoPorId], references: [id], onDelete: SetNull)
+  revisadoEn    DateTime?
+  creadoEn      DateTime         @default(now())
+  actualizadoEn DateTime         @updatedAt
+
+  @@index([estado])
+  @@index([caminoId])
+  @@index([tramoId])
+  @@schema("vialidad")
+}

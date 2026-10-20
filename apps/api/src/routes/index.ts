@@ -1,0 +1,38 @@
+import { Router } from 'express';
+import authRoutes from './auth.routes.js';
+import usuariosRoutes from './usuarios.routes.js';
+import catalogosRoutes from './catalogos.routes.js';
+import capasRoutes from './capas.routes.js';
+import departamentosRoutes from './departamentos.routes.js';
+import caminosRoutes from './caminos.routes.js';
+import tramosRoutes from './tramos.routes.js';
+import mantenimientosRoutes from './mantenimientos.routes.js';
+import fotosRoutes from './fotos.routes.js';
+import infraestructuraRoutes from './infraestructura.routes.js';
+import puntosRoutes, { categoriasRouter } from './puntos.routes.js';
+import sugerenciasRoutes from './sugerencias.routes.js';
+import reportesRoutes from './reportes.routes.js';
+import syncRoutes from './sync.routes.js';
+import auditoriaRoutes from './auditoria.routes.js';
+import healthRoutes from './health.routes.js';
+
+const router = Router();
+router.use('/health', healthRoutes);
+router.use('/auth', authRoutes);
+router.use('/usuarios', usuariosRoutes);
+router.use('/catalogos', catalogosRoutes);
+router.use('/capas', capasRoutes);
+router.use('/departamentos', departamentosRoutes);
+router.use('/caminos', caminosRoutes);
+router.use('/tramos', tramosRoutes);
+router.use('/mantenimientos', mantenimientosRoutes);
+router.use('/fotos', fotosRoutes);
+router.use('/infraestructura', infraestructuraRoutes);
+router.use('/puntos-interes', puntosRoutes);
+router.use('/categorias-puntos', categoriasRouter);
+router.use('/sugerencias', sugerenciasRoutes);
+router.use('/reportes', reportesRoutes);
+router.use('/sync', syncRoutes);
+router.use('/auditoria', auditoriaRoutes);
+
+export default router;

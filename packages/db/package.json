@@ -1,0 +1,32 @@
+{
+  "name": "@sde/db",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "generate": "prisma generate --schema prisma/schema.prisma",
+    "migrate": "dotenv -e ../../.env -- prisma migrate dev --schema prisma/schema.prisma",
+    "deploy": "dotenv -e ../../.env -- prisma migrate deploy --schema prisma/schema.prisma",
+    "reset": "dotenv -e ../../.env -- prisma migrate reset --schema prisma/schema.prisma --force",
+    "studio": "dotenv -e ../../.env -- prisma studio --schema prisma/schema.prisma",
+    "seed": "dotenv -e ../../.env -- tsx prisma/seed.ts",
+    "importar-departamentos": "dotenv -e ../../.env -- tsx scripts/importar-departamentos.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3",
+    "bcrypt": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/node": "^22.10.2",
+    "prisma": "6.19.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3",
+    "dotenv-cli": "^8.0.0"
+  }
+}

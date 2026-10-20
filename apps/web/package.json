@@ -1,0 +1,44 @@
+{
+  "name": "@sde/web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^3.10.0",
+    "@sde/shared": "workspace:*",
+    "@tanstack/react-query": "^5.62.0",
+    "browser-image-compression": "^2.0.2",
+    "clsx": "^2.1.1",
+    "dexie": "^4.4.7",
+    "jose": "^5.9.6",
+    "leaflet": "^1.9.4",
+    "leaflet.markercluster": "^1.5.3",
+    "lucide-react": "^0.468.0",
+    "next": "14.2.35",
+    "next-auth": "4.24.15",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-hook-form": "^7.54.0",
+    "recharts": "^2.15.4",
+    "tailwind-merge": "^2.6.0",
+    "zod": "^3.25.76",
+    "zustand": "^5.0.2",
+    "@turf/turf": "^7.2.0"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.15",
+    "@types/leaflet.markercluster": "^1.5.4",
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.17",
+    "@types/react-dom": "^18.3.5",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/caminos_rurales
+      JWT_SHARED_SECRET: secreto-de-prueba-con-mas-de-32-caracteres
+      NEXTAUTH_SECRET: otro-secreto-de-prueba-con-mas-de-32-caracteres
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api
+      NEXTAUTH_URL: http://localhost:3000
+      ADMIN_EMAIL: admin@ejemplo.com
+      ADMIN_PASSWORD: Cambiar123!
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Generar cliente Prisma
+        run: pnpm db:generate
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Tests unitarios
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build

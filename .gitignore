@@ -1,27 +1,14 @@
-# Dependencias
 node_modules/
-
-# Variables de entorno (nunca commitear)
+.pnpm-store/
+.turbo/
+dist/
+.next/
+out/
+coverage/
+*.tsbuildinfo
 .env
 .env.*
 !.env.example
-
-# Builds
-dist/
-build/
-
-# Logs
-*.log
-npm-debug.log*
-
-# Herramientas de desarrollo
-.playwright-mcp/
-.vercel/
-
-# Sistema operativo
 .DS_Store
-Thumbs.db
-
-# Prisma
-*.db
-backend/prisma/*.db
+*.log
+.vercel/

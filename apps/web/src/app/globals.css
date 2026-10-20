@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --fondo: 245 247 250;
+  --panel: 255 255 255;
+  --borde: 226 232 240;
+  --texto: 15 23 42;
+  --suave: 100 116 139;
+  --marca: 13 116 144;
+}
+
+.dark {
+  --fondo: 15 23 42;
+  --panel: 30 41 59;
+  --borde: 51 65 85;
+  --texto: 241 245 249;
+  --suave: 148 163 184;
+  --marca: 34 211 238;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: rgb(var(--fondo));
+  color: rgb(var(--texto));
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.leaflet-container {
+  background: #dbeafe;
+  font: inherit;
+}
+
+.dark .leaflet-container {
+  background: #0f172a;
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: rgb(var(--panel));
+  color: rgb(var(--texto));
+}
+
+.leaflet-bar a,
+.leaflet-control-layers {
+  background: rgb(var(--panel)) !important;
+  color: rgb(var(--texto)) !important;
+}
+
+@layer components {
+  .boton {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .boton-primario {
+    @apply boton bg-marca text-white hover:opacity-90;
+  }
+  .boton-secundario {
+    @apply boton border border-borde bg-panel text-texto hover:bg-fondo;
+  }
+  .boton-peligro {
+    @apply boton bg-red-600 text-white hover:bg-red-700;
+  }
+  .campo {
+    @apply w-full rounded-lg border border-borde bg-panel px-3 py-2 text-sm text-texto outline-none focus:ring-2 focus:ring-marca/40;
+  }
+  .etiqueta {
+    @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-suave;
+  }
+  .tarjeta {
+    @apply rounded-xl border border-borde bg-panel p-4 shadow-panel;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+}

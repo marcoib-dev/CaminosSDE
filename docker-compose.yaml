@@ -1,19 +1,8 @@
-# PostgreSQL local para desarrollo.
-# Los valores por defecto coinciden con backend/.env:
-#   postgresql://postgres:postgres@localhost:5432/caminos_rurales?schema=public
-#
-# Uso:
-#   docker compose -f docker-compose.yaml up -d
-#   docker compose -f docker-compose.yaml down
-#
-# Para cambiar las credenciales sin tocar este archivo, definí POSTGRES_USER,
-# POSTGRES_PASSWORD, POSTGRES_DB y POSTGRES_PORT en un .env en la raíz
-# (ese archivo está ignorado por git).
-
+# PostgreSQL 16 + PostGIS para desarrollo local.
 services:
   postgres:
-    image: postgres:16-alpine
-    container_name: caminos-rurales-postgres
+    image: postgis/postgis:16-3.4
+    container_name: caminos-sde-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}

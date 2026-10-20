@@ -1,0 +1,17 @@
+{
+  "name": "Vialidad SDE — Sistema Provincial",
+  "short_name": "Vialidad SDE",
+  "description": "Gestión de caminos rurales de Santiago del Estero",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#0d7490",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
