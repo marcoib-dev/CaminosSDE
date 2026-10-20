@@ -38,14 +38,6 @@ function Rutas() {
         }
       />
       <Route
-        path="/sugerencias"
-        element={
-          <RutaProtegida roles={ROLES_EDITOR}>
-            <SugerenciasPage />
-          </RutaProtegida>
-        }
-      />
-      <Route
         path="/importar"
         element={
           <RutaProtegida roles={ROLES_EDITOR}>
