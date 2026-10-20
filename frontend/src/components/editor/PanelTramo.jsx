@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ESTADOS, ORDEN_ESTADOS, ORDEN_TIPOS, TIPOS } from '../../constants/dominio.js';
 import {
   actualizarTramo,
@@ -36,6 +36,12 @@ export default function PanelTramo({
   const [observaciones, setObservaciones] = useState(tramo.observaciones ?? '');
   const [guardando, setGuardando] = useState(false);
   const [errorTramo, setErrorTramo] = useState('');
+  const montadoRef = useRef(true);
+
+  useEffect(() => {
+    montadoRef.current = true;
+    return () => { montadoRef.current = false; };
+  }, []);
 
   const [historial, setHistorial] = useState(null);
   const [cargandoHistorial, setCargandoHistorial] = useState(false);
@@ -51,18 +57,26 @@ export default function PanelTramo({
     setErrorTramo('');
     setGuardando(true);
 
+    // Actualización optimista inmediata en UI
+    const nuevosDatos = {
+      estado,
+      tipo,
+      observaciones: observaciones.trim() || null,
+    };
+
     try {
-      const respuesta = await actualizarTramo(tramo.id, {
-        estado,
-        tipo,
-        observaciones: observaciones.trim() || null,
-      });
+      const respuesta = await actualizarTramo(tramo.id, nuevosDatos);
       onMensaje(respuesta?.mensaje || 'Tramo actualizado.');
-      await onRecargar();
+      // Recarga en background SIN await - no bloquea el botón
+      onRecargar();
     } catch (err) {
+      // Revertir UI optimista si falla
+      setEstado(tramo.estado);
+      setTipo(tramo.tipo);
+      setObservaciones(tramo.observaciones ?? '');
       setErrorTramo(err?.message || 'No se pudo actualizar el tramo.');
     } finally {
-      setGuardando(false);
+      if (montadoRef.current) setGuardando(false);
     }
   };
 
@@ -77,10 +91,11 @@ export default function PanelTramo({
       await eliminarTramo(tramo.id);
       onMensaje('Tramo eliminado correctamente.');
       onCerrar();
-      await onRecargar();
+      onRecargar(); // background, sin await
     } catch (err) {
       setErrorTramo(err?.message || 'No se pudo eliminar el tramo.');
-      setGuardando(false);
+    } finally {
+      if (montadoRef.current) setGuardando(false);
     }
   };
 
@@ -95,10 +110,11 @@ export default function PanelTramo({
       await eliminarCamino(camino.id);
       onMensaje('Camino eliminado correctamente.');
       onCerrar();
-      await onRecargar();
+      onRecargar(); // background, sin await
     } catch (err) {
       setErrorTramo(err?.message || 'No se pudo eliminar el camino.');
-      setGuardando(false);
+    } finally {
+      if (montadoRef.current) setGuardando(false);
     }
   };
 
