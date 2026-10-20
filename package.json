@@ -9,12 +9,12 @@
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "db:generate": "pnpm --filter @sde/db generate",
-    "db:migrate": "pnpm --filter @sde/db migrate",
-    "db:deploy": "pnpm --filter @sde/db deploy",
-    "db:seed": "pnpm --filter @sde/db seed",
-    "db:studio": "pnpm --filter @sde/db studio",
-    "db:reset": "pnpm --filter @sde/db reset"
+    "db:generate": "pnpm --filter @sde/db run generate",
+    "db:migrate": "pnpm --filter @sde/db run migrate",
+    "db:deploy": "pnpm --filter @sde/db run deploy",
+    "db:seed": "pnpm --filter @sde/db run seed",
+    "db:studio": "pnpm --filter @sde/db run studio",
+    "db:reset": "pnpm --filter @sde/db run reset"
   },
   "devDependencies": {
     "prettier": "^3.4.2",
