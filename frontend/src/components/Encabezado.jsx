@@ -159,7 +159,7 @@ export default function Encabezado() {
   const enlaces = [
     { to: '/', etiqueta: 'Mapa', Icono: IconoMapa, end: true },
     { to: '/prioridades', etiqueta: 'Prioridades', Icono: IconoRanking },
-    ...(esEditor ? [{ to: '/sugerencias', etiqueta: 'Sugerencias', Icono: IconoSugerencia }] : []),
+    // { to: '/sugerencias', etiqueta: 'Sugerencias', Icono: IconoSugerencia }, // Oculto temporalmente
     ...(esEditor ? [{ to: '/importar', etiqueta: 'Importar', Icono: IconoImportar }] : []),
     ...(esAdmin
       ? [
@@ -210,6 +210,7 @@ export default function Encabezado() {
           </NavLink>
 
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+            {/* Icono de sugerencias (campana) oculto temporalmente
             {esEditor ? (
               <NavLink
                 to="/sugerencias"
@@ -219,7 +220,7 @@ export default function Encabezado() {
               >
                 <IconoCampana />
               </NavLink>
-            ) : null}
+            ) : null} */}
 
             <button
               type="button"

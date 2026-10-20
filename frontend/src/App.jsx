@@ -7,7 +7,7 @@ import LoginPage from './pages/LoginPage.jsx';
 import MapaPage from './pages/MapaPage.jsx';
 import PerfilPage from './pages/PerfilPage.jsx';
 import PrioridadesPage from './pages/PrioridadesPage.jsx';
-import SugerenciasPage from './pages/SugerenciasPage.jsx';
+// import SugerenciasPage from './pages/SugerenciasPage.jsx'; // Oculto temporalmente
 import UsuariosPage from './pages/UsuariosPage.jsx';
 
 const ROLES_EDITOR = ['EDITOR', 'ADMIN'];
@@ -20,6 +20,15 @@ function Rutas() {
       <Route path="/prioridades" element={<PrioridadesPage />} />
       <Route path="/login" element={<LoginPage />} />
 
+      {/* Ruta de sugerencias oculta temporalmente
+      <Route
+        path="/sugerencias"
+        element={
+          <RutaProtegida roles={ROLES_EDITOR}>
+            <SugerenciasPage />
+          </RutaProtegida>
+        }
+      /> */}
       <Route
         path="/perfil"
         element={
