@@ -2,7 +2,7 @@ import { ESTADOS, TIPOS } from '../constants/dominio.js';
 import { useCategorias } from '../context/CategoriasContext.jsx';
 import { formatearKm, nivelPrioridad } from '../utils/formato.js';
 import PuntajePrioridad from './PuntajePrioridad.jsx';
-import SugerenciaForm from './SugerenciaForm.jsx';
+// import SugerenciaForm from './SugerenciaForm.jsx'; // Oculto temporalmente
 
 function Insignia({ children, color }) {
   return (
@@ -137,7 +137,7 @@ export default function PopupTramo({ tramo, prioridad, onEditar }) {
           )}
         </div>
 
-        <SugerenciaForm caminoId={tramo.caminoId} tramoId={tramo.id} />
+        {/* <SugerenciaForm caminoId={tramo.caminoId} tramoId={tramo.id} /> */} {/* Oculto temporalmente */}
       </div>
 
       {onEditar ? (
