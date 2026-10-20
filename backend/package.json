@@ -15,7 +15,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "seed": "node prisma/seed.js",
-    "ejemplos:importacion": "node scripts/generar-ejemplos-importacion.js"
+    "ejemplos:importacion": "node scripts/generar-ejemplos-importacion.js",
+    "puntos:importar": "node scripts/importar-puntos.js"
   },
   "dependencies": {
     "@ngageoint/geopackage": "^4.2.10",

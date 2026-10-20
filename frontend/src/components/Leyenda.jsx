@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import {
-  CATEGORIAS_POI,
   ESTADOS,
-  ORDEN_CATEGORIAS_POI,
   ORDEN_ESTADOS,
   ORDEN_TIPOS,
   TIPOS,
 } from '../constants/dominio.js';
 import { BORDE_TRAMO } from '../constants/estilosMapa.js';
+import { useCategorias } from '../context/CategoriasContext.jsx';
 import { useTema } from '../context/TemaContext.jsx';
 
 function MuestraLinea({ color, dashArray }) {
@@ -42,6 +41,7 @@ function MuestraLinea({ color, dashArray }) {
 }
 
 export default function Leyenda({ colorearPor }) {
+  const { categorias } = useCategorias();
   const [abierto, setAbierto] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
   );
@@ -123,22 +123,19 @@ export default function Leyenda({ colorearPor }) {
           <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-stone-400 dark:text-stone-500">
             Puntos de interés
           </p>
-          <ul className="mt-1.5 flex items-center gap-3">
-            {ORDEN_CATEGORIAS_POI.map((clave) => {
-              const categoria = CATEGORIAS_POI[clave];
-              return (
-                <li key={clave} className="flex items-center gap-1.5 text-[10px] text-stone-600 dark:text-stone-400">
-                  <span
-                    className="flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-extrabold text-white"
-                    style={{ backgroundColor: categoria.color }}
-                    aria-hidden="true"
-                  >
-                    {categoria.inicial}
-                  </span>
-                  {categoria.etiqueta}
-                </li>
-              );
-            })}
+          <ul className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            {categorias.map((categoria) => (
+              <li key={categoria.clave} className="flex items-center gap-1.5 text-[10px] text-stone-600 dark:text-stone-400">
+                <span
+                  className="flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-extrabold text-white"
+                  style={{ backgroundColor: categoria.color }}
+                  aria-hidden="true"
+                >
+                  {categoria.inicial}
+                </span>
+                {categoria.etiqueta}
+              </li>
+            ))}
           </ul>
         </div>
       </div>

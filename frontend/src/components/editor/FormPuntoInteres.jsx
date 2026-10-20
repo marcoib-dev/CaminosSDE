@@ -1,22 +1,67 @@
 import { useState } from 'react';
 import Modal from '../Modal.jsx';
-import { CATEGORIAS_POI, ORDEN_CATEGORIAS_POI } from '../../constants/dominio.js';
-import { actualizarPuntoInteres, crearPuntoInteres } from '../../services/api.js';
+import { useCategorias } from '../../context/CategoriasContext.jsx';
+import {
+  actualizarPuntoInteres,
+  crearCategoriaPunto,
+  crearPuntoInteres,
+} from '../../services/api.js';
+
+const COLOR_NUEVO = '#0e7490';
 
 export default function FormPuntoInteres({ punto, coordenada, onGuardar, onCerrar }) {
   const esEdicion = Boolean(punto);
+  const { categorias, recargar: recargarCategorias } = useCategorias();
 
   const [campos, setCampos] = useState(() => ({
     nombre: punto?.nombre ?? '',
-    categoria: punto?.categoria ?? 'HOSPITAL',
+    categoria: punto?.categoria ?? categorias[0]?.clave ?? 'HOSPITAL',
     latitud: punto?.latitud ?? coordenada?.lat ?? '',
     longitud: punto?.longitud ?? coordenada?.lng ?? '',
   }));
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
 
+  const [mostrarNuevaCategoria, setMostrarNuevaCategoria] = useState(false);
+  const [nuevaCategoria, setNuevaCategoria] = useState({ nombre: '', color: COLOR_NUEVO });
+  const [creandoCategoria, setCreandoCategoria] = useState(false);
+  const [errorCategoria, setErrorCategoria] = useState('');
+
   const cambiar = (campo, valor) => {
     setCampos((actual) => ({ ...actual, [campo]: valor }));
+  };
+
+  const agregarCategoria = async (evento) => {
+    evento.preventDefault();
+    setErrorCategoria('');
+
+    const nombre = nuevaCategoria.nombre.trim();
+
+    if (!nombre) {
+      setErrorCategoria('Escribí un nombre para la categoría.');
+      return;
+    }
+
+    setCreandoCategoria(true);
+
+    try {
+      const respuesta = await crearCategoriaPunto({
+        nombre,
+        color: nuevaCategoria.color,
+      });
+      const clave = respuesta?.datos?.clave;
+
+      await recargarCategorias();
+
+      if (clave) cambiar('categoria', clave);
+
+      setNuevaCategoria({ nombre: '', color: COLOR_NUEVO });
+      setMostrarNuevaCategoria(false);
+    } catch (err) {
+      setErrorCategoria(err?.message || 'No se pudo crear la categoría.');
+    } finally {
+      setCreandoCategoria(false);
+    }
   };
 
   const enviar = async (evento) => {
@@ -85,22 +130,95 @@ export default function FormPuntoInteres({ punto, coordenada, onGuardar, onCerra
         </div>
 
         <div>
-          <label htmlFor="punto-categoria" className="etiqueta-campo">
-            Categoría
-          </label>
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor="punto-categoria" className="etiqueta-campo mb-1.5">
+              Categoría
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                setMostrarNuevaCategoria((actual) => !actual);
+                setErrorCategoria('');
+              }}
+              className="mb-1.5 text-[11px] font-semibold text-cyan-700 transition hover:text-cyan-900 dark:text-cyan-300 dark:hover:text-cyan-100"
+            >
+              {mostrarNuevaCategoria ? 'Cancelar' : '+ Nueva categoría'}
+            </button>
+          </div>
           <select
             id="punto-categoria"
             value={campos.categoria}
             onChange={(evento) => cambiar('categoria', evento.target.value)}
             className="control-campo"
-            disabled={guardando}
+            disabled={guardando || creandoCategoria}
           >
-            {ORDEN_CATEGORIAS_POI.map((clave) => (
-              <option key={clave} value={clave}>
-                {CATEGORIAS_POI[clave].etiqueta}
+            {categorias.map((categoria) => (
+              <option key={categoria.clave} value={categoria.clave}>
+                {categoria.etiqueta}
               </option>
             ))}
           </select>
+
+          {mostrarNuevaCategoria ? (
+            <div className="mt-2 rounded-xl border border-cyan-200 bg-cyan-50/60 p-3 dark:border-cyan-900/60 dark:bg-cyan-950/20">
+              <p className="text-[11px] font-semibold text-cyan-900 dark:text-cyan-100">
+                Nueva categoría
+              </p>
+              <p className="mt-0.5 text-[10px] leading-relaxed text-cyan-800/80 dark:text-cyan-200/80">
+                Se agrega a la lista para este y otros puntos de interés.
+              </p>
+
+              <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
+                <div>
+                  <label htmlFor="categoria-nombre" className="etiqueta-campo text-xs">
+                    Nombre
+                  </label>
+                  <input
+                    id="categoria-nombre"
+                    type="text"
+                    value={nuevaCategoria.nombre}
+                    onChange={(evento) =>
+                      setNuevaCategoria((actual) => ({ ...actual, nombre: evento.target.value }))
+                    }
+                    maxLength={80}
+                    placeholder="Comisaría, Destacamento…"
+                    className="control-campo"
+                    disabled={creandoCategoria}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="categoria-color" className="etiqueta-campo text-xs">
+                    Color
+                  </label>
+                  <input
+                    id="categoria-color"
+                    type="color"
+                    value={nuevaCategoria.color}
+                    onChange={(evento) =>
+                      setNuevaCategoria((actual) => ({ ...actual, color: evento.target.value }))
+                    }
+                    className="control-campo h-10 w-full cursor-pointer p-1 sm:w-16"
+                    disabled={creandoCategoria}
+                  />
+                </div>
+              </div>
+
+              {errorCategoria ? (
+                <p className="mt-2 text-[11px] font-medium text-red-700 dark:text-red-300" role="alert">
+                  {errorCategoria}
+                </p>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={agregarCategoria}
+                disabled={creandoCategoria}
+                className="boton-primario mt-2 w-full py-1.5 text-xs sm:w-auto"
+              >
+                {creandoCategoria ? 'Creando…' : 'Crear y usar categoría'}
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -152,7 +270,7 @@ export default function FormPuntoInteres({ punto, coordenada, onGuardar, onCerra
           <button type="button" onClick={onCerrar} className="boton-suave" disabled={guardando}>
             Cancelar
           </button>
-          <button type="submit" className="boton-primario" disabled={guardando}>
+          <button type="submit" className="boton-primario" disabled={guardando || creandoCategoria}>
             {guardando ? 'Guardando…' : esEdicion ? 'Guardar cambios' : 'Crear punto'}
           </button>
         </div>

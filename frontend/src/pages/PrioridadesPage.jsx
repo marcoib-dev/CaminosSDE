@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PuntajePrioridad from '../components/PuntajePrioridad.jsx';
 import {
-  CATEGORIAS_POI,
   ESTADOS,
   ORDEN_ESTADOS,
   ORDEN_TIPOS,
   TIPOS,
 } from '../constants/dominio.js';
+import { useCategorias } from '../context/CategoriasContext.jsx';
 import { obtenerTramosPrioridad } from '../services/api.js';
 import { formatearKm, formatearNumero, normalizarTexto } from '../utils/formato.js';
 
@@ -64,6 +64,8 @@ function IconoRed({ className = 'h-4 w-4' }) {
 }
 
 function PuntosCercanos({ puntos = [] }) {
+  const { porClave } = useCategorias();
+
   if (puntos.length === 0) {
     return <span className="text-xs text-stone-400 dark:text-stone-500">Sin cercanía</span>;
   }
@@ -80,9 +82,9 @@ function PuntosCercanos({ puntos = [] }) {
           <span
             key={punto.id}
             className="flex h-4 w-4 items-center justify-center rounded-full border border-white text-[7px] font-bold text-white dark:border-slate-900"
-            style={{ backgroundColor: CATEGORIAS_POI[punto.categoria]?.color ?? '#78716c' }}
+            style={{ backgroundColor: porClave[punto.categoria]?.color ?? '#78716c' }}
           >
-            {CATEGORIAS_POI[punto.categoria]?.inicial ?? '?'}
+            {porClave[punto.categoria]?.inicial ?? '?'}
           </span>
         ))}
       </span>
@@ -188,7 +190,7 @@ export default function PrioridadesPage() {
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-stone-600 dark:text-stone-300">
               Ranking de tramos según el estado de transitabilidad, la superficie y la cercanía a
-              hospitales, UPAs y escuelas.
+              puntos de interés como hospitales, escuelas y UPAs.
             </p>
           </div>
           <button type="button" onClick={cargar} disabled={cargando} className="boton-suave self-start sm:self-auto">

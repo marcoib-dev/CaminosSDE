@@ -13,7 +13,7 @@ Este repositorio contiene el **backend** (API REST) y el **frontend** (mapa púb
 - Cálculo y división de geometrías con `@turf/turf`.
 - Importación de relevamientos: lectura de `.gpkg` con `@ngageoint/geopackage`, de `.kml` con `@tmcw/togeojson`, reproyección con `proj4` y subida multipart con `multer`.
 - Geometrías guardadas como **GeoJSON `LineString`** en columnas `Json` (sin PostGIS).
-- Frontend con React 18, Vite, React Router, Tailwind CSS y Leaflet/React-Leaflet.
+- Frontend con React 18, Vite, React Router, Tailwind CSS y Leaflet/React-Leaflet, con `react-leaflet-cluster` para agrupar los puntos de interés del mapa.
 
 ## Estructura
 
@@ -44,7 +44,7 @@ frontend/
     components/editor/   Herramientas de dibujo, formularios y panel de edición
     components/importacion/  Mapa de previsualización y filas de importación
     constants/           Estados, superficies, colores y categorías de puntos de interés
-    context/             Tema claro/oscuro y sesión (JWT)
+    context/             Tema, sesión (JWT) y categorías de puntos de interés
     pages/               Mapa, ranking, login, perfil, sugerencias, importación y administración
     services/api.js      Cliente de la API (VITE_API_URL)
     services/token.js    Lectura y escritura del token en localStorage
@@ -201,8 +201,9 @@ Backend:
 | `npm run prisma:generate` | Genera el cliente de Prisma. |
 | `npm run prisma:migrate` | Ejecuta `prisma migrate dev`. |
 | `npm run prisma:studio` | Abre Prisma Studio. |
-| `npm run seed` | Crea el ADMIN inicial, 3 caminos y 3 puntos de interés de ejemplo. |
+| `npm run seed` | Crea el ADMIN inicial, las categorías base, 3 caminos y 3 puntos de interés de ejemplo. |
 | `npm run ejemplos:importacion` | Regenera los archivos `.kml` y `.gpkg` de `ejemplos/` para probar la importación. |
+| `npm run puntos:importar -- --archivo <ruta>` | Importa hospitales, escuelas y UPAs desde GeoJSON o KML. Ver [Importar hospitales y escuelas](#importar-hospitales-y-escuelas). |
 
 Frontend:
 
@@ -247,7 +248,7 @@ Los errores tienen este formato:
 | Rol | `ADMIN`, `EDITOR` |
 | Estado del tramo | `TRANSITABLE`, `REGULAR`, `INTRANSITABLE`, `EN_OBRA` |
 | Tipo de superficie | `TIERRA`, `RIPIO`, `ENRIPIADO_MEJORADO`, `PAVIMENTADO` |
-| Categoría de punto de interés | `HOSPITAL`, `ESCUELA`, `UPA` |
+| Categoría de punto de interés | Texto libre definido en `CategoriaPunto`. Las categorías base son `HOSPITAL`, `ESCUELA` y `UPA`; los editores pueden crear otras. |
 | Estado de sugerencia | `PENDIENTE`, `REVISADA`, `DESCARTADA` |
 | Acción de auditoría | `CREAR`, `EDITAR`, `BORRAR` |
 
@@ -263,6 +264,7 @@ Los errores tienen este formato:
 | GET | `/api/tramos` | Público | — (query: `caminoId`, `estado`, `tipo`, `departamento`) | `200 { datos: Tramo[] }` con datos básicos del camino |
 | GET | `/api/tramos/prioridad` | Público | — | `200 { datos: TramoConPrioridad[] }` ordenados de mayor a menor puntaje |
 | GET | `/api/puntos-interes` | Público | — (query: `categoria`) | `200 { datos: PuntoInteres[] }` |
+| GET | `/api/categorias-puntos` | Público | — | `200 { datos: CategoriaPunto[] }` con `totalPuntos` |
 | POST | `/api/sugerencias` | Público · máx. 5 cada 15 min por IP | `{ texto, contacto?, caminoId?, tramoId? }` | `201 { datos: { id, estado, creadoEn }, mensaje }` · `429` |
 | POST | `/api/auth/login` | Público | `{ email, password }` | `200 { datos: { token, usuario } }` · `401` |
 | GET | `/api/auth/me` | Autenticado | — | `200 { datos: Usuario }` · `401` |
@@ -277,9 +279,11 @@ Los errores tienen este formato:
 | PATCH | `/api/tramos/:id/dividir` | EDITOR | `{ desde, hasta, estado?, tipo?, observaciones? }` | `200 { datos: Tramo[] (2 o 3 segmentos), mensaje }` · `400` / `404` |
 | GET | `/api/tramos/:id/historial` | EDITOR | — | `200 { datos: HistorialTramo[] }` con usuario · `404` |
 | DELETE | `/api/tramos/:id` | EDITOR | — | `200 { mensaje }` · `404` |
-| POST | `/api/puntos-interes` | EDITOR | `{ nombre, categoria, latitud, longitud }` | `201 { datos: PuntoInteres, mensaje }` |
-| PATCH | `/api/puntos-interes/:id` | EDITOR | Cualquier subconjunto de los campos anteriores | `200 { datos: PuntoInteres, mensaje }` · `404` |
+| POST | `/api/puntos-interes` | EDITOR | `{ nombre, categoria, latitud, longitud }` | `201 { datos: PuntoInteres, mensaje }` · `400` si la categoría no existe |
+| PATCH | `/api/puntos-interes/:id` | EDITOR | Cualquier subconjunto de los campos anteriores | `200 { datos: PuntoInteres, mensaje }` · `400` / `404` |
 | DELETE | `/api/puntos-interes/:id` | EDITOR | — | `200 { mensaje }` · `404` |
+| POST | `/api/categorias-puntos` | EDITOR | `{ nombre, color?, inicial?, peso? }` | `201 { datos: CategoriaPunto, mensaje }` · `409` si ya existe |
+| DELETE | `/api/categorias-puntos/:id` | EDITOR | — | `200 { mensaje }` · `400` si es base · `409` si tiene puntos · `404` |
 | POST | `/api/fotos/firma` | EDITOR | — | `200 { datos: { cloudName, apiKey, timestamp, folder, firma, urlSubida } }` · `503` si Cloudinary no está configurado |
 | POST | `/api/fotos` | EDITOR | `{ url, descripcion?, caminoId, tramoId? }` | `201 { datos: Foto, mensaje }` · `400` / `404` |
 | DELETE | `/api/fotos/:id` | EDITOR | — | `200 { mensaje }` · `404` |
@@ -305,11 +309,11 @@ Todos los endpoints protegidos devuelven `401` sin token válido y `403` si el r
 | | `estado` | Estado del tramo. |
 | | `tipo` | Tipo de superficie. |
 | | `departamento` | Departamento del camino. |
-| `GET /api/puntos-interes` | `categoria` | `HOSPITAL`, `ESCUELA` o `UPA`. |
+| `GET /api/puntos-interes` | `categoria` | Clave de la categoría: `HOSPITAL`, `ESCUELA`, `UPA` o una creada por un editor. |
 | `GET /api/sugerencias` | `estado` | `PENDIENTE`, `REVISADA` o `DESCARTADA`. |
 | | `caminoId` | Filtra por camino. |
 | `GET /api/auditoria` | `accion` | `CREAR`, `EDITAR` o `BORRAR`. |
-| | `entidad` | Nombre de la entidad (`Camino`, `Tramo`, `PuntoInteres`, `Foto`, `Sugerencia`, `Usuario`). |
+| | `entidad` | Nombre de la entidad (`Camino`, `Tramo`, `PuntoInteres`, `CategoriaPunto`, `Foto`, `Sugerencia`, `Usuario`). |
 | | `usuarioId` | Autor de la acción. |
 | | `desde`, `hasta` | Rango de fechas ISO 8601. |
 | | `limite` | Cantidad máxima de registros (1 a 500, por defecto 100). El total no se limita. |
@@ -367,6 +371,26 @@ La `longitudKm` se calcula en el backend con turf cada vez que se crea o edita l
   "actualizadoEn": "2026-10-19T12:00:00.000Z"
 }
 ```
+
+### CategoriaPunto
+
+```json
+{
+  "id": "cat_hospital",
+  "clave": "HOSPITAL",
+  "nombre": "Hospital",
+  "color": "#dc2626",
+  "inicial": "H",
+  "peso": 30,
+  "orden": 1,
+  "protegida": true,
+  "creadoEn": "2026-10-19T12:00:00.000Z",
+  "actualizadoEn": "2026-10-19T12:00:00.000Z",
+  "totalPuntos": 1
+}
+```
+
+`protegida: true` identifica las categorías base (Hospital, Escuela y UPA), que no se pueden eliminar. El `peso` es el aporte a la prioridad de los tramos cercanos y en las categorías nuevas se puede definir entre 0 y 30 (por defecto 10). La `clave` se genera a partir del nombre en mayúsculas, sin acentos y con guiones bajos.
 
 ### Foto
 
@@ -634,7 +658,7 @@ La fórmula vive en `backend/src/services/prioridad.js` y sus pesos se pueden aj
 |---|---|---|
 | Estado del tramo | `INTRANSITABLE` 50 · `REGULAR` 25 · `EN_OBRA` 10 · `TRANSITABLE` 0 | 50 |
 | Tipo de superficie | `TIERRA` 20 · `RIPIO` 12 · `ENRIPIADO_MEJORADO` 6 · `PAVIMENTADO` 0 | 20 |
-| Cercanía a puntos de interés | `HOSPITAL` +30 · `UPA` +20 · `ESCUELA` +15 | 30 |
+| Cercanía a puntos de interés | `HOSPITAL` +30 · `UPA` +20 · `ESCUELA` +15 · categoría propia según su `peso` (0 a 30) | 30 |
 
 La cercanía se calcula con `@turf/turf` (`pointToLineDistance`) entre la geometría del tramo y cada punto de interés. Solo suman los puntos ubicados a `PRIORIDAD_UMBRAL_KM` o menos (1 km por defecto). El aporte por cercanía se limita a 30 puntos y el total a 100.
 
@@ -699,7 +723,7 @@ El encabezado cambia según la sesión y el rol: el lector ve Mapa y Prioridades
 
 ### Mapa público
 
-Mapa de pantalla completa con OpenStreetMap, panel de filtros por estado, superficie, departamento y búsqueda por nombre; selector "Colorear por" estado o superficie (por defecto, estado); leyenda; marcadores de hospitales, escuelas y UPAs con visibilidad independiente. Al hacer clic en un tramo se muestra un popup con el camino, localidad, longitud del tramo y total del camino, estado, superficie, puntaje de prioridad, fotos y el formulario **Sugerir un cambio** (`POST /api/sugerencias`).
+Mapa de pantalla completa con OpenStreetMap, panel de filtros por estado, superficie, departamento y búsqueda por nombre; selector "Colorear por" estado o superficie (por defecto, estado); leyenda; marcadores de puntos de interés agrupados en clusters según el nivel de zoom. Los puntos están **ocultos por defecto**: se muestran al tocar una categoría en la sección **Explorar caminos**, con un botón flotante **Mostrar puntos de interés** cuando no hay ninguna visible. Al hacer clic en un tramo se muestra un popup con el camino, localidad, longitud del tramo y total del camino, estado, superficie, puntaje de prioridad, fotos y el formulario **Sugerir un cambio** (`POST /api/sugerencias`).
 
 ### Edición en el mapa
 
@@ -710,7 +734,8 @@ Con sesión de EDITOR o ADMIN aparece la barra **Edición** en el mapa:
 - **Dibujar tramo:** se eligen camino, estado, superficie y observaciones; después se hace clic en el mapa para agregar vértices. El panel inferior permite deshacer el último punto, cancelar o terminar el tramo. Se requieren al menos dos puntos.
 - **Editar tramo y camino:** al hacer clic en un tramo, el popup incluye el botón para abrir el panel lateral. Desde ahí se editan los datos del camino, el estado, la superficie y las observaciones del tramo; también se accede a las fotos, al historial y a las bajas.
 - **Dividir / reclasificar:** se tocan el punto inicial y el final sobre la línea del tramo (el punto se ajusta a la línea más cercana). Luego se elige estado, superficie y observaciones del segmento central y se aplica `PATCH /api/tramos/:id/dividir`. Los extremos conservan sus valores originales.
-- **Puntos de interés:** con **Nuevo punto** se hace clic en el mapa y se completa nombre y categoría. Desde el popup del marcador se pueden editar o eliminar.
+- **Puntos de interés:** con **Nuevo punto** se hace clic en el mapa y se completa nombre y categoría. Desde el popup del marcador se pueden editar o eliminar. En el formulario se puede crear una categoría nueva al vuelo, con nombre y color.
+- **Categorías de puntos de interés:** el botón **Administrar** de la sección Explorar caminos abre el listado de categorías. Desde ahí se crean categorías propias (nombre, color y aporte a la prioridad) y se eliminan las que no tengan puntos asociados. Hospital, Escuela y UPA son categorías base y no se pueden borrar.
 - **Fotos:** el panel del tramo permite subir imágenes a Cloudinary y eliminarlas de la base.
 - **Historial:** el panel del tramo muestra los cambios de estado, superficie y geometría con fecha y usuario.
 - Las bajas de caminos, tramos y fotos piden confirmación antes de ejecutarse.
@@ -747,7 +772,7 @@ npm run build
 ## Historial y auditoría
 
 - **HistorialTramo:** se registra automáticamente cuando un `PATCH /api/tramos/:id` (o una división) modifica `estado`, `tipo` o `geometria`. Guarda valores anteriores y nuevos, usuario y fecha. Si se elimina el tramo, su historial se elimina en cascada; si se elimina el usuario, el historial se conserva sin usuario.
-- **Auditoría:** se registra en las altas, ediciones y bajas disponibles de caminos, tramos, fotos, puntos de interés, sugerencias y usuarios, además del cambio de contraseña. Las sugerencias enviadas por ciudadanos se auditan con usuario nulo. Guarda usuario, acción, entidad, id, detalle, IP y fecha.
+- **Auditoría:** se registra en las altas, ediciones y bajas disponibles de caminos, tramos, fotos, puntos de interés, categorías de puntos, sugerencias y usuarios, además del cambio de contraseña. Las sugerencias enviadas por ciudadanos se auditan con usuario nulo. Guarda usuario, acción, entidad, id, detalle, IP y fecha.
 - El historial de un tramo se consulta con `GET /api/tramos/:id/historial` (EDITOR o ADMIN) y se muestra en el panel de edición. La auditoría se consulta con rol `ADMIN` y filtros por usuario, acción, entidad y rango de fechas.
 
 ## Datos de ejemplo
@@ -757,6 +782,7 @@ npm run build
 - Un usuario `ADMIN` con los valores de `ADMIN_NOMBRE`, `ADMIN_EMAIL` y `ADMIN_PASSWORD`.
 - Tres caminos en los departamentos Atamisqui, Salavina y General Taboada.
 - Seis tramos que cubren los cuatro estados (`TRANSITABLE`, `REGULAR`, `INTRANSITABLE`, `EN_OBRA`) y los cuatro tipos de superficie.
+- Las categorías base de puntos de interés (Hospital, Escuela y UPA).
 - Tres puntos de interés de ejemplo (hospital, escuela y UPA) cercanos a los tramos para probar los marcadores y el cálculo de prioridad.
 
 El seed es idempotente: no duplica el usuario, los caminos ni los puntos de interés si ya existen. Si el ADMIN ya existe, no se sobrescribe su contraseña.
@@ -764,3 +790,66 @@ El seed es idempotente: no duplica el usuario, los caminos ni los puntos de inte
 ## Importación y datos reales
 
 La importación de relevamientos hechos en QGIS (`.kml` y `.gpkg`) está implementada en esta etapa. Ver [Importación de relevamientos](#importación-de-relevamientos) para el formato esperado, el mapeo de atributos y los archivos de ejemplo.
+
+## Importar hospitales y escuelas
+
+La pantalla `/importar` solo carga tramos (líneas). Para el padrón de puntos de interés (`HOSPITAL`, `ESCUELA`, `UPA`) hay un script de carga única que trabaja con puntos:
+
+```bash
+cd backend
+npm run puntos:importar -- --archivo ../datos/hospitales.geojson --categoria HOSPITAL
+```
+
+Sin `--aplicar` el script solo previsualiza: muestra la categoría, el nombre y las coordenadas de cada punto y no escribe en la base. Es el modo recomendado para revisar antes de cargar.
+
+| Opción | Descripción |
+|---|---|
+| `--archivo, -a <ruta>` | Archivo `.geojson`, `.json` o `.kml`. Acepta `FeatureCollection`, una `Feature` suelta o una lista de features. |
+| `--categoria, -c <valor>` | `HOSPITAL`, `ESCUELA` o `UPA`. Si se omite, la categoría se deduce de los atributos de cada punto. |
+| `--umbral-metros <n>` | Distancia para considerar duplicado a un punto con el mismo nombre y categoría. Por defecto `150`. |
+| `--aplicar` | Guarda los puntos en la base. |
+| `--ayuda, -h` | Muestra la ayuda. |
+
+Solo se importan geometrías `Point` y `MultiPoint`. Un `MultiPoint` genera un punto por coordenada; las líneas y los polígonos se descartan y se informan en el resumen.
+
+### Categoría de cada punto
+
+Con `--categoria`, todos los puntos del archivo se cargan con esa categoría. Si se omite, el script busca los atributos `categoria`, `category`, `amenity`, `healthcare`, `tipo`, `clase` o `tipo_establecimiento` y reconoce valores como:
+
+| Valores en el archivo | Categoría |
+|---|---|
+| `HOSPITAL`, `hospital`, `sanatorio` | `HOSPITAL` |
+| `ESCUELA`, `school`, `colegio`, `instituto`, `establecimiento_educativo` | `ESCUELA` |
+| `UPA`, `clinic`, `doctors`, `health_post`, `centro_de_salud`, `puesto_sanitario` | `UPA` |
+
+Los puntos sin nombre o sin categoría se descartan y se cuentan en el resumen. Los nombres se toman de `nombre`, `name`, `nombre_establecimiento`, `denominacion`, `titulo`, `title` o `establecimiento`.
+
+### Deduplicación
+
+Un punto se considera duplicado si tiene la **misma categoría**, el **mismo nombre** (sin distinguir mayúsculas, acentos ni separadores) y está a menos de `--umbral-metros` de uno existente en la base o de otro punto ya aceptado del mismo archivo. Los duplicados se omiten y se listan al final, así que el script se puede volver a ejecutar sin miedo a duplicar datos.
+
+La carga masiva no registra filas en `Auditoria` (no hay usuario asociado). Si se necesita trazabilidad, conviene cargar los puntos con el formulario del editor.
+
+### Obtener los datos
+
+La fuente más simple es OpenStreetMap a través de [Overpass Turbo](https://overpass-turbo.eu), que es gratuito y no requiere clave. Se pega esta consulta, se ejecuta y se exporta como GeoJSON:
+
+```
+[out:json][timeout:90];
+area["name"="Santiago del Estero"]["admin_level"="4"]["boundary"="administrative"]->.sde;
+(
+  node["amenity"="hospital"](area.sde);
+  way["amenity"="hospital"](area.sde);
+  node["amenity"="school"](area.sde);
+  way["amenity"="school"](area.sde);
+);
+out center;
+```
+
+`out center` devuelve el centro de los hospitales y escuelas dibujados como polígonos, así que la exportación queda toda en puntos. Para UPAs conviene sumar `amenity=clinic`, `amenity=doctors`, `healthcare=*` o los nombres locales (`centro de salud`, `puesto sanitario`).
+
+El resultado de Overpass se puede exportar por separado (primero hospitales, después escuelas) o en un solo archivo: en ese caso no se usa `--categoria` y se deja que el script la deduzca de `amenity`. Los datos de OpenStreetMap se publican bajo licencia ODbL y requieren atribución.
+
+Otra alternativa son los padrones oficiales de establecimientos educativos y de salud (Ministerio de Educación / Mapa Educativo y Ministerio de Salud / SISA), que suelen venir en CSV o GeoJSON. En ese caso hay que convertirlos a GeoJSON de puntos con los atributos indicados arriba.
+
+Los archivos de la carga inicial de hospitales y escuelas están en `backend/datos/`; el detalle de la consulta, la depuración y la licencia está en `backend/datos/LEEME.md`.

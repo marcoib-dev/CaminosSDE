@@ -3,6 +3,17 @@ import { registrarAuditoria } from '../services/auditoria.service.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
+async function verificarCategoria(clave) {
+  const categoria = await prisma.categoriaPunto.findUnique({
+    where: { clave },
+    select: { id: true },
+  });
+
+  if (!categoria) {
+    throw new ApiError(400, `La categoría "${clave}" no existe.`);
+  }
+}
+
 export const listar = asyncHandler(async (req, res) => {
   const { categoria } = req.consulta;
 
@@ -15,6 +26,8 @@ export const listar = asyncHandler(async (req, res) => {
 });
 
 export const crear = asyncHandler(async (req, res) => {
+  await verificarCategoria(req.body.categoria);
+
   const punto = await prisma.puntoInteres.create({ data: req.body });
 
   await registrarAuditoria({
@@ -37,6 +50,10 @@ export const actualizar = asyncHandler(async (req, res) => {
 
   if (!existente) {
     throw new ApiError(404, 'Punto de interés no encontrado.');
+  }
+
+  if (req.body.categoria) {
+    await verificarCategoria(req.body.categoria);
   }
 
   const punto = await prisma.puntoInteres.update({

@@ -1,7 +1,5 @@
 import {
-  CATEGORIAS_POI,
   ESTADOS,
-  ORDEN_CATEGORIAS_POI,
   ORDEN_ESTADOS,
   ORDEN_TIPOS,
   TIPOS,
@@ -16,15 +14,29 @@ function IconoBuscar() {
   );
 }
 
+function IconoOjo({ tachado = false }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-3.5 w-3.5" aria-hidden="true">
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12S18 18.5 12 18.5 2.5 12 2.5 12Z" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="2.6" />
+      {tachado ? <path d="m4 4 16 16" strokeLinecap="round" /> : null}
+    </svg>
+  );
+}
+
 export default function PanelFiltros({
   filtros,
   onCambiar,
   departamentos,
   totalTramos,
   tramosVisibles,
+  categorias,
   puntosVisibles,
   conteosPoi,
+  algunPuntoVisible,
   onAlternarPunto,
+  onAlternarTodosPuntos,
+  onAdministrarCategorias,
   abierto,
   onCerrar,
   onLimpiar,
@@ -171,22 +183,52 @@ export default function PanelFiltros({
       </div>
 
       <div className="mt-4 border-t border-arena-200 pt-3 dark:border-white/10">
-        <span className="etiqueta-campo">Puntos de interés</span>
-        <div className="grid grid-cols-3 gap-1.5">
-          {ORDEN_CATEGORIAS_POI.map((clave) => {
-            const categoria = CATEGORIAS_POI[clave];
-            const activo = puntosVisibles[clave];
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <span className="etiqueta-campo mb-0">Puntos de interés</span>
+            <p className="mt-0.5 text-[11px] leading-snug text-stone-500 dark:text-stone-400">
+              {algunPuntoVisible
+                ? 'Tocá una categoría para ocultarla o mostrarla en el mapa.'
+                : 'Están ocultos. Tocá una categoría para verla en el mapa.'}
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            {onAdministrarCategorias ? (
+              <button
+                type="button"
+                onClick={onAdministrarCategorias}
+                className="rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-cyan-700 transition hover:bg-cyan-50 hover:text-cyan-900 dark:text-cyan-300 dark:hover:bg-cyan-950/40 dark:hover:text-cyan-100"
+              >
+                Administrar
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={onAlternarTodosPuntos}
+              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-stone-600 transition hover:bg-stone-900/5 hover:text-stone-900 dark:text-stone-300 dark:hover:bg-white/10 dark:hover:text-white"
+            >
+              <IconoOjo tachado={algunPuntoVisible} />
+              {algunPuntoVisible ? 'Ocultar todos' : 'Mostrar todos'}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-2 grid grid-cols-3 gap-1.5">
+          {categorias.map((categoria) => {
+            const activo = Boolean(puntosVisibles[categoria.clave]);
             return (
               <button
-                key={clave}
+                key={categoria.clave}
                 type="button"
-                onClick={() => onAlternarPunto(clave)}
+                onClick={() => onAlternarPunto(categoria.clave)}
                 aria-pressed={activo}
+                aria-label={`${activo ? 'Ocultar' : 'Mostrar'} ${categoria.etiqueta} en el mapa`}
+                title={`${activo ? 'Ocultar' : 'Mostrar'} ${categoria.etiqueta} en el mapa`}
                 className={[
-                  'flex flex-col items-center gap-1 rounded-xl border px-1 py-2 text-[10px] font-semibold transition',
+                  'group flex flex-col items-center gap-1 rounded-xl border px-1 py-2 text-[10px] font-semibold transition',
                   activo
-                    ? 'border-arena-300 bg-white text-stone-700 shadow-sm dark:border-white/15 dark:bg-white/10 dark:text-stone-100'
-                    : 'border-transparent bg-stone-900/5 text-stone-400 hover:bg-stone-900/10 dark:bg-white/5 dark:text-stone-500 dark:hover:bg-white/10',
+                    ? 'border-arena-300 bg-white text-stone-700 shadow-sm hover:border-cyan-300 hover:bg-cyan-50/60 dark:border-white/15 dark:bg-white/10 dark:text-stone-100 dark:hover:border-cyan-700 dark:hover:bg-cyan-950/30'
+                    : 'border-dashed border-arena-300 bg-stone-900/[0.03] text-stone-400 hover:border-cyan-400 hover:bg-cyan-50 hover:text-cyan-800 dark:border-white/15 dark:bg-white/5 dark:text-stone-500 dark:hover:border-cyan-600 dark:hover:bg-cyan-950/30 dark:hover:text-cyan-200',
                 ].join(' ')}
               >
                 <span
@@ -196,12 +238,28 @@ export default function PanelFiltros({
                 >
                   {categoria.inicial}
                 </span>
-                {categoria.etiqueta}
-                <span className="text-[9px] font-medium opacity-70">{conteosPoi[clave] ?? 0}</span>
+                <span className="w-full truncate" title={categoria.etiqueta}>
+                  {categoria.etiqueta}
+                </span>
+                <span
+                  className={[
+                    'flex items-center gap-1 text-[9px] font-medium',
+                    activo ? 'text-verde-700 dark:text-verde-300' : 'opacity-70',
+                  ].join(' ')}
+                >
+                  <IconoOjo tachado={!activo} />
+                  {activo ? 'Visible' : 'Oculto'} · {conteosPoi[categoria.clave] ?? 0}
+                </span>
               </button>
             );
           })}
         </div>
+
+        {categorias.length === 0 ? (
+          <p className="mt-2 text-[11px] text-stone-500 dark:text-stone-400">
+            Todavía no hay categorías de puntos de interés.
+          </p>
+        ) : null}
       </div>
 
       <div className="mt-4 flex items-center justify-between gap-2 border-t border-arena-200 pt-3 dark:border-white/10">

@@ -28,7 +28,7 @@ Todo el texto de la interfaz, mensajes de error y comentarios de negocio va en *
   - `tipo`: `TIERRA`, `RIPIO`, `ENRIPIADO_MEJORADO`, `PAVIMENTADO`.
   - El mapa puede colorear por estado o por tipo (selector "Colorear por"). Al colorear por estado, el tipo se distingue con estilo de línea (punteada, etc.).
   - Un `MultiLineString` importado se separa en varios tramos **sin unirlos**.
-- **PuntoInteres**: nombre, categoría (`HOSPITAL`, `ESCUELA`, `UPA`), ubicación (lat/lng).
+- **PuntoInteres**: nombre, categoría, ubicación (lat/lng). Las categorías base son `HOSPITAL`, `ESCUELA` y `UPA`; los editores pueden crear categorías propias (nombre, color y peso de prioridad) y eliminarlas si no tienen puntos asociados.
 - **Prioridad**: puntaje de 0 a 100 por tramo, calculado en el backend. Sube con peor estado, peor tipo de superficie y cercanía a puntos de interés (ver etapa 2).
 - **HistorialTramo**: cada cambio de estado/tipo/geometría guarda fecha, usuario y valores anteriores.
 - **Foto**: asociada a un camino (o tramo), guardada en un servicio externo (Cloudinary); en la BD solo la URL.

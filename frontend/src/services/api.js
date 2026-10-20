@@ -82,6 +82,11 @@ export async function obtenerPuntosInteres() {
   return respuesta?.datos ?? [];
 }
 
+export async function obtenerCategoriasPuntos() {
+  const respuesta = await solicitar('/categorias-puntos');
+  return respuesta?.datos ?? [];
+}
+
 export async function obtenerTramosPrioridad() {
   const respuesta = await solicitar('/tramos/prioridad');
   return respuesta?.datos ?? [];
@@ -180,6 +185,14 @@ export async function actualizarPuntoInteres(id, datos) {
 
 export async function eliminarPuntoInteres(id) {
   return solicitar(`/puntos-interes/${encodeURIComponent(id)}`, { metodo: 'DELETE' });
+}
+
+export async function crearCategoriaPunto(datos) {
+  return solicitar('/categorias-puntos', { metodo: 'POST', cuerpo: datos });
+}
+
+export async function eliminarCategoriaPunto(id) {
+  return solicitar(`/categorias-puntos/${encodeURIComponent(id)}`, { metodo: 'DELETE' });
 }
 
 /* ---------- Fotos ---------- */

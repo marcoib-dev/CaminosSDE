@@ -271,6 +271,46 @@
   border-color: #e2e8f0;
 }
 
+/* Conjuntos de puntos de interés */
+
+.cluster-poi-contenedor {
+  background: transparent;
+  border: 0;
+}
+
+.cluster-poi {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  border: 2px solid #ffffff;
+  background: #0e7490;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 5px 14px rgba(15, 26, 36, 0.35);
+  transition: transform 150ms ease;
+}
+
+.cluster-poi:hover {
+  transform: scale(1.08);
+}
+
+.dark .cluster-poi {
+  border-color: #0f1a24;
+  background: #22d3ee;
+  color: #083344;
+}
+
+/* Mientras se dibuja un tramo, los conjuntos no deben capturar el clic. */
+
+.mapa-editando .cluster-poi-contenedor {
+  pointer-events: none;
+}
+
 /* Scrollbars discretos */
 
 .panel-desplazable {

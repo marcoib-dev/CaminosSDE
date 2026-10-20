@@ -75,7 +75,7 @@ export default function BarraEditor({
       etiqueta: 'Nuevo punto',
       icono: <IconoPunto />,
       accion: onNuevoPunto,
-      titulo: 'Agregar un hospital, escuela o UPA',
+      titulo: 'Agregar un punto de interés',
     },
   ];
 

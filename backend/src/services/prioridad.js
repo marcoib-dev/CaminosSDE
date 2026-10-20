@@ -40,7 +40,11 @@ const redondear = (valor) => Math.round(valor * 100) / 100;
  * Calcula el puntaje de prioridad de un tramo (0 a 100) según su estado,
  * el tipo de superficie y la cercanía a puntos de interés.
  */
-export function calcularPrioridad(tramo, puntosInteres = []) {
+export function calcularPrioridad(
+  tramo,
+  puntosInteres = [],
+  pesosCategoria = PESOS_PRIORIDAD.categoriaPunto
+) {
   const puntajeEstado = PESOS_PRIORIDAD.estado[tramo.estado] ?? 0;
   const puntajeTipo = PESOS_PRIORIDAD.tipo[tramo.tipo] ?? 0;
 
@@ -59,7 +63,7 @@ export function calcularPrioridad(tramo, puntosInteres = []) {
 
       if (distanciaKm > UMBRAL_CERCANIA_KM) continue;
 
-      const aporte = PESOS_PRIORIDAD.categoriaPunto[punto.categoria] ?? 0;
+      const aporte = pesosCategoria[punto.categoria] ?? 0;
       puntajeCercania += aporte;
 
       puntosCercanos.push({

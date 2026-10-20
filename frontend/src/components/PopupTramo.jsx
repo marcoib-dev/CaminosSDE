@@ -1,4 +1,5 @@
-import { CATEGORIAS_POI, ESTADOS, TIPOS } from '../constants/dominio.js';
+import { ESTADOS, TIPOS } from '../constants/dominio.js';
+import { useCategorias } from '../context/CategoriasContext.jsx';
 import { formatearKm, nivelPrioridad } from '../utils/formato.js';
 import PuntajePrioridad from './PuntajePrioridad.jsx';
 import SugerenciaForm from './SugerenciaForm.jsx';
@@ -16,6 +17,7 @@ function Insignia({ children, color }) {
 }
 
 export default function PopupTramo({ tramo, prioridad, onEditar }) {
+  const { porClave: categoriasPorClave } = useCategorias();
   const camino = tramo.camino ?? {};
   const estado = ESTADOS[tramo.estado];
   const tipo = TIPOS[tramo.tipo];
@@ -86,7 +88,7 @@ export default function PopupTramo({ tramo, prioridad, onEditar }) {
                   <span className="font-medium text-stone-700 dark:text-stone-200">
                     {puntosCercanos
                       .slice(0, 2)
-                      .map((punto) => `${punto.nombre} (${CATEGORIAS_POI[punto.categoria]?.etiqueta ?? punto.categoria})`)
+                      .map((punto) => `${punto.nombre} (${categoriasPorClave[punto.categoria]?.etiqueta ?? punto.categoria})`)
                       .join(', ')}
                     {puntosCercanos.length > 2 ? ` y ${puntosCercanos.length - 2} más` : ''}
                   </span>

@@ -36,7 +36,7 @@ export const listar = asyncHandler(async (req, res) => {
  * El puntaje se calcula al vuelo a partir de los pesos de services/prioridad.js.
  */
 export const listarPrioridades = asyncHandler(async (req, res) => {
-  const [tramos, puntosInteres] = await Promise.all([
+  const [tramos, puntosInteres, categorias] = await Promise.all([
     prisma.tramo.findMany({
       include: {
         camino: { select: { id: true, nombre: true, localidad: true, departamento: true } },
@@ -45,12 +45,17 @@ export const listarPrioridades = asyncHandler(async (req, res) => {
     prisma.puntoInteres.findMany({
       select: { id: true, nombre: true, categoria: true, latitud: true, longitud: true },
     }),
+    prisma.categoriaPunto.findMany({ select: { clave: true, peso: true } }),
   ]);
+
+  const pesosCategoria = Object.fromEntries(
+    categorias.map((categoria) => [categoria.clave, categoria.peso])
+  );
 
   const datos = tramos
     .map((tramo) => ({
       ...tramo,
-      prioridad: calcularPrioridad(tramo, puntosInteres),
+      prioridad: calcularPrioridad(tramo, puntosInteres, pesosCategoria),
     }))
     .sort(
       (a, b) =>

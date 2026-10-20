@@ -29,12 +29,6 @@ enum TipoSuperficie {
   PAVIMENTADO
 }
 
-enum CategoriaPuntoInteres {
-  HOSPITAL
-  ESCUELA
-  UPA
-}
-
 enum EstadoSugerencia {
   PENDIENTE
   REVISADA
@@ -120,14 +114,31 @@ model HistorialTramo {
   @@index([fecha])
 }
 
-model PuntoInteres {
-  id            String                @id @default(cuid())
+model CategoriaPunto {
+  id            String          @id @default(cuid())
+  clave         String          @unique
   nombre        String
-  categoria     CategoriaPuntoInteres
-  latitud       Float
-  longitud      Float
-  creadoEn      DateTime              @default(now())
-  actualizadoEn DateTime              @updatedAt
+  color         String          @default("#0e7490")
+  inicial       String
+  peso          Int             @default(10)
+  orden         Int             @default(100)
+  protegida     Boolean         @default(false)
+  creadoEn      DateTime        @default(now())
+  actualizadoEn DateTime        @updatedAt
+  puntos        PuntoInteres[]
+
+  @@index([orden])
+}
+
+model PuntoInteres {
+  id             String         @id @default(cuid())
+  nombre         String
+  categoria      String
+  categoriaPunto CategoriaPunto @relation(fields: [categoria], references: [clave], onUpdate: Cascade, onDelete: Restrict)
+  latitud        Float
+  longitud       Float
+  creadoEn       DateTime       @default(now())
+  actualizadoEn  DateTime       @updatedAt
 
   @@index([categoria])
 }

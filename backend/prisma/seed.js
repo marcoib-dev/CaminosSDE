@@ -43,6 +43,12 @@ const puntosDemo = [
   },
 ];
 
+const categoriasBase = [
+  { clave: 'HOSPITAL', nombre: 'Hospital', color: '#dc2626', inicial: 'H', peso: 30, orden: 1 },
+  { clave: 'ESCUELA', nombre: 'Escuela', color: '#d97706', inicial: 'E', peso: 15, orden: 2 },
+  { clave: 'UPA', nombre: 'UPA', color: '#2563eb', inicial: 'U', peso: 20, orden: 3 },
+];
+
 const caminosDemo = [
   {
     nombre: 'Ruta Provincial 5 - Acceso a Villa Atamisqui',
@@ -156,6 +162,21 @@ async function main() {
   });
 
   console.log(`Usuario ADMIN disponible: ${admin.email}`);
+
+  for (const categoria of categoriasBase) {
+    await prisma.categoriaPunto.upsert({
+      where: { clave: categoria.clave },
+      update: {
+        nombre: categoria.nombre,
+        color: categoria.color,
+        inicial: categoria.inicial,
+        peso: categoria.peso,
+        orden: categoria.orden,
+        protegida: true,
+      },
+      create: { ...categoria, protegida: true },
+    });
+  }
 
   for (const datos of caminosDemo) {
     const existente = await prisma.camino.findFirst({

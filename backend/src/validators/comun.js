@@ -2,7 +2,6 @@ import { z } from 'zod';
 
 export const ESTADOS_TRAMO = ['TRANSITABLE', 'REGULAR', 'INTRANSITABLE', 'EN_OBRA'];
 export const TIPOS_SUPERFICIE = ['TIERRA', 'RIPIO', 'ENRIPIADO_MEJORADO', 'PAVIMENTADO'];
-export const CATEGORIAS_PUNTO = ['HOSPITAL', 'ESCUELA', 'UPA'];
 export const ESTADOS_SUGERENCIA = ['PENDIENTE', 'REVISADA', 'DESCARTADA'];
 export const ACCIONES_AUDITORIA = ['CREAR', 'EDITAR', 'BORRAR'];
 
@@ -14,9 +13,15 @@ export const tipoSuperficieSchema = z.enum(TIPOS_SUPERFICIE, {
   error: `El tipo debe ser uno de: ${TIPOS_SUPERFICIE.join(', ')}.`,
 });
 
-export const categoriaPuntoSchema = z.enum(CATEGORIAS_PUNTO, {
-  error: `La categoría debe ser una de: ${CATEGORIAS_PUNTO.join(', ')}.`,
-});
+export const categoriaPuntoSchema = z
+  .string({ error: 'La categoría es obligatoria.' })
+  .trim()
+  .min(1, { error: 'La categoría es obligatoria.' })
+  .max(60, { error: 'La categoría no puede superar los 60 caracteres.' })
+  .transform((valor) => valor.toUpperCase())
+  .refine((valor) => /^[A-Z0-9_]+$/.test(valor), {
+    error: 'La categoría no es válida.',
+  });
 
 export const estadoSugerenciaSchema = z.enum(ESTADOS_SUGERENCIA, {
   error: `El estado debe ser uno de: ${ESTADOS_SUGERENCIA.join(', ')}.`,

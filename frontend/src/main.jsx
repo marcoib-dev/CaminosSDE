@@ -4,13 +4,16 @@ import 'leaflet/dist/leaflet.css';
 import './index.css';
 import App from './App.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
+import { CategoriasProvider } from './context/CategoriasContext.jsx';
 import { TemaProvider } from './context/TemaContext.jsx';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <TemaProvider>
     <BrowserRouter>
       <AuthProvider>
-        <App />
+        <CategoriasProvider>
+          <App />
+        </CategoriasProvider>
       </AuthProvider>
     </BrowserRouter>
   </TemaProvider>

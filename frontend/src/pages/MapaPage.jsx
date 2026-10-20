@@ -7,11 +7,12 @@ import BarraEditor from '../components/editor/BarraEditor.jsx';
 import FormCamino from '../components/editor/FormCamino.jsx';
 import FormPuntoInteres from '../components/editor/FormPuntoInteres.jsx';
 import FormTramo from '../components/editor/FormTramo.jsx';
+import GestionCategorias from '../components/editor/GestionCategorias.jsx';
 import ListaCaminos from '../components/editor/ListaCaminos.jsx';
 import PanelHerramienta from '../components/editor/PanelHerramienta.jsx';
 import PanelTramo from '../components/editor/PanelTramo.jsx';
-import { ORDEN_CATEGORIAS_POI } from '../constants/dominio.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useCategorias } from '../context/CategoriasContext.jsx';
 import {
   crearTramo,
   dividirTramo,
@@ -32,18 +33,23 @@ const FILTROS_INICIALES = {
   busqueda: '',
 };
 
-const PUNTOS_VISIBLES_INICIALES = {
-  HOSPITAL: true,
-  ESCUELA: true,
-  UPA: true,
-};
-
 const MENSAJE_DURACION_MS = 6000;
+
+function IconoOjo({ tachado = false }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4" aria-hidden="true">
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12S18 18.5 12 18.5 2.5 12 2.5 12Z" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="2.6" />
+      {tachado ? <path d="m4 4 16 16" strokeLinecap="round" /> : null}
+    </svg>
+  );
+}
 
 export default function MapaPage() {
   const [parametros] = useSearchParams();
   const tramoDestacadoId = parametros.get('tramo');
   const { esEditor } = useAuth();
+  const { categorias, porClave: categoriasPorClave, recargar: recargarCategorias } = useCategorias();
 
   const [caminos, setCaminos] = useState([]);
   const [puntos, setPuntos] = useState([]);
@@ -51,7 +57,7 @@ export default function MapaPage() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [filtros, setFiltros] = useState(FILTROS_INICIALES);
-  const [puntosVisibles, setPuntosVisibles] = useState(PUNTOS_VISIBLES_INICIALES);
+  const [puntosVisibles, setPuntosVisibles] = useState({});
   const [panelAbierto, setPanelAbierto] = useState(false);
 
   const [herramienta, setHerramienta] = useState('');
@@ -63,6 +69,7 @@ export default function MapaPage() {
   const [modalTramo, setModalTramo] = useState(null);
   const [modalPunto, setModalPunto] = useState(null);
   const [modalLista, setModalLista] = useState(false);
+  const [modalCategorias, setModalCategorias] = useState(false);
   const [mensaje, setMensaje] = useState('');
 
   const cargar = useCallback(async (opciones = {}) => {
@@ -136,12 +143,17 @@ export default function MapaPage() {
   );
 
   const conteosPoi = useMemo(() => {
-    const conteos = Object.fromEntries(ORDEN_CATEGORIAS_POI.map((clave) => [clave, 0]));
+    const conteos = Object.fromEntries(categorias.map((categoria) => [categoria.clave, 0]));
     puntos.forEach((punto) => {
       if (conteos[punto.categoria] !== undefined) conteos[punto.categoria] += 1;
     });
     return conteos;
-  }, [puntos]);
+  }, [categorias, puntos]);
+
+  const algunPuntoVisible = useMemo(
+    () => categorias.some((categoria) => Boolean(puntosVisibles[categoria.clave])),
+    [categorias, puntosVisibles]
+  );
 
   const tramosVisibles = useMemo(() => {
     const busqueda = normalizarTexto(filtros.busqueda);
@@ -188,6 +200,23 @@ export default function MapaPage() {
 
   const alternarPunto = (categoria) => {
     setPuntosVisibles((actual) => ({ ...actual, [categoria]: !actual[categoria] }));
+  };
+
+  const alternarTodosPuntos = () => {
+    if (algunPuntoVisible) {
+      setPuntosVisibles({});
+      return;
+    }
+
+    setPuntosVisibles(
+      Object.fromEntries(categorias.map((categoria) => [categoria.clave, true]))
+    );
+  };
+
+  const mostrarTodosPuntos = () => {
+    setPuntosVisibles(
+      Object.fromEntries(categorias.map((categoria) => [categoria.clave, true]))
+    );
   };
 
   const filtrosActivos = [filtros.estado, filtros.tipo, filtros.departamento, filtros.busqueda].filter(
@@ -354,6 +383,7 @@ export default function MapaPage() {
   const guardarPunto = async (punto, texto) => {
     setModalPunto(null);
     await cargar({ silencioso: true });
+    await recargarCategorias();
     setMensaje(texto || 'Punto de interés guardado correctamente.');
   };
 
@@ -364,6 +394,7 @@ export default function MapaPage() {
     try {
       await eliminarPuntoInteres(punto.id);
       await cargar({ silencioso: true });
+      await recargarCategorias();
       setMensaje('Punto de interés eliminado correctamente.');
     } catch (err) {
       setMensaje(err?.message || 'No se pudo eliminar el punto de interés.');
@@ -443,6 +474,7 @@ export default function MapaPage() {
             puntos={puntos}
             colorearPor={filtros.colorearPor}
             puntosVisibles={puntosVisibles}
+            categoriasPorClave={categoriasPorClave}
             prioridades={prioridadesPorTramo}
             tramoDestacadoId={tramoDestacadoId}
             tramoSeleccionadoId={tramoSeleccionadoId}
@@ -501,15 +533,35 @@ export default function MapaPage() {
             departamentos={departamentos}
             totalTramos={tramos.length}
             tramosVisibles={tramosVisibles.length}
+            categorias={categorias}
             puntosVisibles={puntosVisibles}
             conteosPoi={conteosPoi}
+            algunPuntoVisible={algunPuntoVisible}
             onAlternarPunto={alternarPunto}
+            onAlternarTodosPuntos={alternarTodosPuntos}
+            onAdministrarCategorias={esEditor ? () => setModalCategorias(true) : undefined}
             abierto={panelAbierto}
             onCerrar={() => setPanelAbierto(false)}
             onLimpiar={limpiarFiltros}
           />
 
           <Leyenda colorearPor={filtros.colorearPor} />
+
+          {puntos.length > 0 && !algunPuntoVisible ? (
+            <div className="pointer-events-none absolute inset-x-0 bottom-6 z-[1040] flex justify-center px-4">
+              <button
+                type="button"
+                onClick={mostrarTodosPuntos}
+                className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white/95 px-3.5 py-2 text-xs font-semibold text-cyan-900 shadow-lg backdrop-blur transition hover:bg-white dark:border-cyan-800 dark:bg-slate-900/95 dark:text-cyan-100 dark:hover:bg-slate-900"
+              >
+                <IconoOjo />
+                Mostrar puntos de interés
+                <span className="rounded-full bg-cyan-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  {puntos.length}
+                </span>
+              </button>
+            </div>
+          ) : null}
 
           {tramos.length > 0 && tramosVisibles.length === 0 ? (
             <div className="pointer-events-none absolute inset-x-4 top-20 z-[1030] flex justify-center">
@@ -589,6 +641,13 @@ export default function MapaPage() {
           coordenada={modalPunto.coordenada}
           onGuardar={guardarPunto}
           onCerrar={() => setModalPunto(null)}
+        />
+      ) : null}
+
+      {modalCategorias ? (
+        <GestionCategorias
+          onCerrar={() => setModalCategorias(false)}
+          onMensaje={setMensaje}
         />
       ) : null}
 
