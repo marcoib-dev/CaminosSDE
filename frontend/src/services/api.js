@@ -2,6 +2,30 @@ import { leerToken } from './token.js';
 
 const URL_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace(/\/+$/, '');
 
+// --- Caché simple en memoria con TTL ---
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
+const cache = new Map();
+
+function cacheGet(key) {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function cacheSet(key, data) {
+  cache.set(key, { data, timestamp: Date.now() });
+}
+
+function cacheInvalidate(pattern) {
+  for (const key of cache.keys()) {
+    if (key.startsWith(pattern)) cache.delete(key);
+  }
+}
+
 export class ErrorApi extends Error {
   constructor(mensaje, estado, detalles = []) {
     super(mensaje);
@@ -73,23 +97,43 @@ async function solicitar(ruta, { metodo = 'GET', cuerpo, formulario, parametros 
 /* ---------- Consultas públicas ---------- */
 
 export async function obtenerCaminos() {
+  const key = 'caminos';
+  const cached = cacheGet(key);
+  if (cached) return cached;
   const respuesta = await solicitar('/caminos', { parametros: { activo: 'true' } });
-  return respuesta?.datos ?? [];
+  const data = respuesta?.datos ?? [];
+  cacheSet(key, data);
+  return data;
 }
 
 export async function obtenerPuntosInteres() {
+  const key = 'puntos-interes';
+  const cached = cacheGet(key);
+  if (cached) return cached;
   const respuesta = await solicitar('/puntos-interes');
-  return respuesta?.datos ?? [];
+  const data = respuesta?.datos ?? [];
+  cacheSet(key, data);
+  return data;
 }
 
 export async function obtenerCategoriasPuntos() {
+  const key = 'categorias-puntos';
+  const cached = cacheGet(key);
+  if (cached) return cached;
   const respuesta = await solicitar('/categorias-puntos');
-  return respuesta?.datos ?? [];
+  const data = respuesta?.datos ?? [];
+  cacheSet(key, data);
+  return data;
 }
 
 export async function obtenerTramosPrioridad() {
+  const key = 'tramos-prioridad';
+  const cached = cacheGet(key);
+  if (cached) return cached;
   const respuesta = await solicitar('/tramos/prioridad');
-  return respuesta?.datos ?? [];
+  const data = respuesta?.datos ?? [];
+  cacheSet(key, data);
+  return data;
 }
 
 export async function crearSugerencia(datos) {
@@ -115,15 +159,24 @@ export async function cambiarPassword(datos) {
 /* ---------- Caminos ---------- */
 
 export async function crearCamino(datos) {
-  return solicitar('/caminos', { metodo: 'POST', cuerpo: datos });
+  const resp = await solicitar('/caminos', { metodo: 'POST', cuerpo: datos });
+  cacheInvalidate('caminos');
+  cacheInvalidate('tramos-prioridad');
+  return resp;
 }
 
 export async function actualizarCamino(id, datos) {
-  return solicitar(`/caminos/${encodeURIComponent(id)}`, { metodo: 'PATCH', cuerpo: datos });
+  const resp = await solicitar(`/caminos/${encodeURIComponent(id)}`, { metodo: 'PATCH', cuerpo: datos });
+  cacheInvalidate('caminos');
+  cacheInvalidate('tramos-prioridad');
+  return resp;
 }
 
 export async function eliminarCamino(id) {
-  return solicitar(`/caminos/${encodeURIComponent(id)}`, { metodo: 'DELETE' });
+  const resp = await solicitar(`/caminos/${encodeURIComponent(id)}`, { metodo: 'DELETE' });
+  cacheInvalidate('caminos');
+  cacheInvalidate('tramos-prioridad');
+  return resp;
 }
 
 /* ---------- Importación de relevamientos ---------- */
@@ -142,27 +195,42 @@ export async function previsualizarImportacion(archivo, mapeo) {
 }
 
 export async function confirmarImportacion(datos) {
-  return solicitar('/caminos/importar/confirmar', { metodo: 'POST', cuerpo: datos });
+  const resp = await solicitar('/caminos/importar/confirmar', { metodo: 'POST', cuerpo: datos });
+  cacheInvalidate('caminos');
+  cacheInvalidate('tramos-prioridad');
+  return resp;
 }
 
 /* ---------- Tramos ---------- */
 export async function crearTramo(datos) {
-  return solicitar('/tramos', { metodo: 'POST', cuerpo: datos });
+  const resp = await solicitar('/tramos', { metodo: 'POST', cuerpo: datos });
+  cacheInvalidate('caminos');
+  cacheInvalidate('tramos-prioridad');
+  return resp;
 }
 
 export async function actualizarTramo(id, datos) {
-  return solicitar(`/tramos/${encodeURIComponent(id)}`, { metodo: 'PATCH', cuerpo: datos });
+  const resp = await solicitar(`/tramos/${encodeURIComponent(id)}`, { metodo: 'PATCH', cuerpo: datos });
+  cacheInvalidate('caminos');
+  cacheInvalidate('tramos-prioridad');
+  return resp;
 }
 
 export async function dividirTramo(id, datos) {
-  return solicitar(`/tramos/${encodeURIComponent(id)}/dividir`, {
+  const resp = await solicitar(`/tramos/${encodeURIComponent(id)}/dividir`, {
     metodo: 'PATCH',
     cuerpo: datos,
   });
+  cacheInvalidate('caminos');
+  cacheInvalidate('tramos-prioridad');
+  return resp;
 }
 
 export async function eliminarTramo(id) {
-  return solicitar(`/tramos/${encodeURIComponent(id)}`, { metodo: 'DELETE' });
+  const resp = await solicitar(`/tramos/${encodeURIComponent(id)}`, { metodo: 'DELETE' });
+  cacheInvalidate('caminos');
+  cacheInvalidate('tramos-prioridad');
+  return resp;
 }
 
 export async function obtenerHistorialTramo(id) {
@@ -173,26 +241,41 @@ export async function obtenerHistorialTramo(id) {
 /* ---------- Puntos de interés ---------- */
 
 export async function crearPuntoInteres(datos) {
-  return solicitar('/puntos-interes', { metodo: 'POST', cuerpo: datos });
+  const resp = await solicitar('/puntos-interes', { metodo: 'POST', cuerpo: datos });
+  cacheInvalidate('puntos-interes');
+  cacheInvalidate('tramos-prioridad');
+  return resp;
 }
 
 export async function actualizarPuntoInteres(id, datos) {
-  return solicitar(`/puntos-interes/${encodeURIComponent(id)}`, {
+  const resp = await solicitar(`/puntos-interes/${encodeURIComponent(id)}`, {
     metodo: 'PATCH',
     cuerpo: datos,
   });
+  cacheInvalidate('puntos-interes');
+  cacheInvalidate('tramos-prioridad');
+  return resp;
 }
 
 export async function eliminarPuntoInteres(id) {
-  return solicitar(`/puntos-interes/${encodeURIComponent(id)}`, { metodo: 'DELETE' });
+  const resp = await solicitar(`/puntos-interes/${encodeURIComponent(id)}`, { metodo: 'DELETE' });
+  cacheInvalidate('puntos-interes');
+  cacheInvalidate('tramos-prioridad');
+  return resp;
 }
 
 export async function crearCategoriaPunto(datos) {
-  return solicitar('/categorias-puntos', { metodo: 'POST', cuerpo: datos });
+  const resp = await solicitar('/categorias-puntos', { metodo: 'POST', cuerpo: datos });
+  cacheInvalidate('categorias-puntos');
+  cacheInvalidate('tramos-prioridad');
+  return resp;
 }
 
 export async function eliminarCategoriaPunto(id) {
-  return solicitar(`/categorias-puntos/${encodeURIComponent(id)}`, { metodo: 'DELETE' });
+  const resp = await solicitar(`/categorias-puntos/${encodeURIComponent(id)}`, { metodo: 'DELETE' });
+  cacheInvalidate('categorias-puntos');
+  cacheInvalidate('tramos-prioridad');
+  return resp;
 }
 
 /* ---------- Fotos ---------- */

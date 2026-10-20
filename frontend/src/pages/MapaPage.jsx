@@ -55,9 +55,11 @@ export default function MapaPage() {
   const [puntos, setPuntos] = useState([]);
   const [prioridades, setPrioridades] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [cargandoPuntos, setCargandoPuntos] = useState(false);
   const [error, setError] = useState('');
   const [filtros, setFiltros] = useState(FILTROS_INICIALES);
   const [puntosVisibles, setPuntosVisibles] = useState({});
+  const [poisCargados, setPoisCargados] = useState(false);
   const [panelAbierto, setPanelAbierto] = useState(false);
 
   const [herramienta, setHerramienta] = useState('');
@@ -79,21 +81,34 @@ export default function MapaPage() {
     setError('');
 
     try {
-      const [caminosData, puntosData] = await Promise.all([obtenerCaminos(), obtenerPuntosInteres()]);
+      // Cargar solo caminos y prioridades (NO puntos de interés)
+      const [caminosData, prioridadesData] = await Promise.all([
+        obtenerCaminos(),
+        obtenerTramosPrioridad().catch(() => []),
+      ]);
       setCaminos(caminosData);
-      setPuntos(puntosData);
-
-      try {
-        setPrioridades(await obtenerTramosPrioridad());
-      } catch {
-        setPrioridades([]);
-      }
+      setPrioridades(prioridadesData);
     } catch (err) {
       setError(err?.message || 'No se pudieron cargar los datos del mapa.');
     } finally {
       if (!silencioso) setCargando(false);
     }
   }, []);
+
+  // Carga perezosa de puntos de interés
+  const cargarPuntos = useCallback(async () => {
+    if (poisCargados) return; // Ya cargados
+    setCargandoPuntos(true);
+    try {
+      const puntosData = await obtenerPuntosInteres();
+      setPuntos(puntosData);
+      setPoisCargados(true);
+    } catch (err) {
+      console.error('Error cargando puntos de interés:', err);
+    } finally {
+      setCargandoPuntos(false);
+    }
+  }, [poisCargados]);
 
   useEffect(() => {
     cargar();
@@ -199,6 +214,7 @@ export default function MapaPage() {
   };
 
   const alternarPunto = (categoria) => {
+    if (!poisCargados) cargarPuntos();
     setPuntosVisibles((actual) => ({ ...actual, [categoria]: !actual[categoria] }));
   };
 
@@ -208,12 +224,14 @@ export default function MapaPage() {
       return;
     }
 
+    if (!poisCargados) cargarPuntos();
     setPuntosVisibles(
       Object.fromEntries(categorias.map((categoria) => [categoria.clave, true]))
     );
   };
 
   const mostrarTodosPuntos = () => {
+    if (!poisCargados) cargarPuntos();
     setPuntosVisibles(
       Object.fromEntries(categorias.map((categoria) => [categoria.clave, true]))
     );
@@ -543,22 +561,47 @@ export default function MapaPage() {
             abierto={panelAbierto}
             onCerrar={() => setPanelAbierto(false)}
             onLimpiar={limpiarFiltros}
+            cargandoPuntos={cargandoPuntos}
           />
 
           <Leyenda colorearPor={filtros.colorearPor} />
 
-          {puntos.length > 0 && !algunPuntoVisible ? (
+          {!algunPuntoVisible && (categorias.length > 0 || cargandoPuntos) ? (
             <div className="pointer-events-none absolute inset-x-0 bottom-6 z-[1040] flex justify-center px-4">
               <button
                 type="button"
                 onClick={mostrarTodosPuntos}
-                className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white/95 px-3.5 py-2 text-xs font-semibold text-cyan-900 shadow-lg backdrop-blur transition hover:bg-white dark:border-cyan-800 dark:bg-slate-900/95 dark:text-cyan-100 dark:hover:bg-slate-900"
+                disabled={cargandoPuntos}
+                className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white/95 px-3.5 py-2 text-xs font-semibold text-cyan-900 shadow-lg backdrop-blur transition hover:bg-white disabled:opacity-50 disabled:cursor-wait dark:border-cyan-800 dark:bg-slate-900/95 dark:text-cyan-100 dark:hover:bg-slate-900"
               >
-                <IconoOjo />
-                Mostrar puntos de interés
-                <span className="rounded-full bg-cyan-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                  {puntos.length}
-                </span>
+                {cargandoPuntos ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        fill="none"
+                        strokeDasharray="31.4 31.4"
+                        strokeLinecap="round"
+                        style={{ strokeDashoffset: '31.4' }}
+                      />
+                    </svg>
+                    Cargando…
+                  </>
+                ) : (
+                  <>
+                    <IconoOjo />
+                    Mostrar puntos de interés
+                    {puntos.length > 0 && (
+                      <span className="rounded-full bg-cyan-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                        {puntos.length}
+                      </span>
+                    )}
+                  </>
+                )}
               </button>
             </div>
           ) : null}

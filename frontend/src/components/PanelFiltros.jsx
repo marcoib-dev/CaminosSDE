@@ -40,6 +40,7 @@ export default function PanelFiltros({
   abierto,
   onCerrar,
   onLimpiar,
+  cargandoPuntos = false,
 }) {
   const hayFiltros =
     Boolean(filtros.estado) || Boolean(filtros.tipo) || Boolean(filtros.departamento) || Boolean(filtros.busqueda);
@@ -214,48 +215,69 @@ export default function PanelFiltros({
         </div>
 
         <div className="mt-2 grid grid-cols-3 gap-1.5">
-          {categorias.map((categoria) => {
-            const activo = Boolean(puntosVisibles[categoria.clave]);
-            return (
-              <button
-                key={categoria.clave}
-                type="button"
-                onClick={() => onAlternarPunto(categoria.clave)}
-                aria-pressed={activo}
-                aria-label={`${activo ? 'Ocultar' : 'Mostrar'} ${categoria.etiqueta} en el mapa`}
-                title={`${activo ? 'Ocultar' : 'Mostrar'} ${categoria.etiqueta} en el mapa`}
-                className={[
-                  'group flex flex-col items-center gap-1 rounded-xl border px-1 py-2 text-[10px] font-semibold transition',
-                  activo
-                    ? 'border-arena-300 bg-white text-stone-700 shadow-sm hover:border-cyan-300 hover:bg-cyan-50/60 dark:border-white/15 dark:bg-white/10 dark:text-stone-100 dark:hover:border-cyan-700 dark:hover:bg-cyan-950/30'
-                    : 'border-dashed border-arena-300 bg-stone-900/[0.03] text-stone-400 hover:border-cyan-400 hover:bg-cyan-50 hover:text-cyan-800 dark:border-white/15 dark:bg-white/5 dark:text-stone-500 dark:hover:border-cyan-600 dark:hover:bg-cyan-950/30 dark:hover:text-cyan-200',
-                ].join(' ')}
-              >
-                <span
-                  className="flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-extrabold text-white"
-                  style={{ backgroundColor: activo ? categoria.color : '#a8a29e' }}
-                  aria-hidden="true"
-                >
-                  {categoria.inicial}
-                </span>
-                <span className="w-full truncate" title={categoria.etiqueta}>
-                  {categoria.etiqueta}
-                </span>
-                <span
+          {cargandoPuntos ? (
+            <div className="col-span-3 flex justify-center py-3">
+              <div className="inline-flex items-center gap-2 text-xs text-stone-500 dark:text-stone-400">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    fill="none"
+                    strokeDasharray="31.4 31.4"
+                    strokeLinecap="round"
+                    style={{ strokeDashoffset: '31.4' }}
+                  />
+                </svg>
+                Cargando puntos de interés…
+              </div>
+            </div>
+          ) : (
+            categorias.map((categoria) => {
+              const activo = Boolean(puntosVisibles[categoria.clave]);
+              return (
+                <button
+                  key={categoria.clave}
+                  type="button"
+                  onClick={() => onAlternarPunto(categoria.clave)}
+                  aria-pressed={activo}
+                  aria-label={`${activo ? 'Ocultar' : 'Mostrar'} ${categoria.etiqueta} en el mapa`}
+                  title={`${activo ? 'Ocultar' : 'Mostrar'} ${categoria.etiqueta} en el mapa`}
                   className={[
-                    'flex items-center gap-1 text-[9px] font-medium',
-                    activo ? 'text-verde-700 dark:text-verde-300' : 'opacity-70',
+                    'group flex flex-col items-center gap-1 rounded-xl border px-1 py-2 text-[10px] font-semibold transition',
+                    activo
+                      ? 'border-arena-300 bg-white text-stone-700 shadow-sm hover:border-cyan-300 hover:bg-cyan-50/60 dark:border-white/15 dark:bg-white/10 dark:text-stone-100 dark:hover:border-cyan-700 dark:hover:bg-cyan-950/30'
+                      : 'border-dashed border-arena-300 bg-stone-900/[0.03] text-stone-400 hover:border-cyan-400 hover:bg-cyan-50 hover:text-cyan-800 dark:border-white/15 dark:bg-white/5 dark:text-stone-500 dark:hover:border-cyan-600 dark:hover:bg-cyan-950/30 dark:hover:text-cyan-200',
                   ].join(' ')}
                 >
-                  <IconoOjo tachado={!activo} />
-                  {activo ? 'Visible' : 'Oculto'} · {conteosPoi[categoria.clave] ?? 0}
-                </span>
-              </button>
-            );
-          })}
+                  <span
+                    className="flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-extrabold text-white"
+                    style={{ backgroundColor: activo ? categoria.color : '#a8a29e' }}
+                    aria-hidden="true"
+                  >
+                    {categoria.inicial}
+                  </span>
+                  <span className="w-full truncate" title={categoria.etiqueta}>
+                    {categoria.etiqueta}
+                  </span>
+                  <span
+                    className={[
+                      'flex items-center gap-1 text-[9px] font-medium',
+                      activo ? 'text-verde-700 dark:text-verde-300' : 'opacity-70',
+                    ].join(' ')}
+                  >
+                    <IconoOjo tachado={!activo} />
+                    {activo ? 'Visible' : 'Oculto'} · {conteosPoi[categoria.clave] ?? 0}
+                  </span>
+                </button>
+              );
+            })
+          )}
         </div>
 
-        {categorias.length === 0 ? (
+        {categorias.length === 0 && !cargandoPuntos ? (
           <p className="mt-2 text-[11px] text-stone-500 dark:text-stone-400">
             Todavía no hay categorías de puntos de interés.
           </p>
