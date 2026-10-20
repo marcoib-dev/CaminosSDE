@@ -1,0 +1,145 @@
+- generic [ref=f11e3]:
+  - banner [ref=f11e4]:
+    - generic [ref=f11e5]:
+      - link "Caminos Rurales de SDE Santiago del Estero" [ref=f11e6] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f11e10]:
+          - generic [ref=f11e11]: Caminos Rurales de SDE
+          - generic [ref=f11e12]: Santiago del Estero
+      - generic [ref=f11e13]:
+        - button "Cambiar a tema oscuro" [ref=f11e14] [cursor=pointer]
+        - link "Ingresar" [ref=f11e17] [cursor=pointer]:
+          - /url: /login
+  - complementary "Menú principal" [ref=f11e20]:
+    - navigation [ref=f11e21]:
+      - paragraph [ref=f11e22]: Menú principal
+      - link "Mapa" [ref=f11e23] [cursor=pointer]:
+        - /url: /
+      - link "Prioridades" [ref=f11e28] [cursor=pointer]:
+        - /url: /prioridades
+    - generic [ref=f11e33]:
+      - paragraph [ref=f11e34]: Acceso institucional
+      - paragraph [ref=f11e35]: Ingresá para editar caminos, tramos y puntos de interés.
+      - link "Ingresar" [ref=f11e36] [cursor=pointer]:
+        - /url: /login
+  - main [ref=f11e40]:
+    - generic [ref=f11e41]:
+      - generic [ref=f11e42]:
+        - generic [ref=f11e48]:
+          - heading "Mapa de Caminos Rurales" [level=1] [ref=f11e49]
+          - paragraph [ref=f11e50]: 11 de 11 tramos visibles
+        - button "Actualizar" [ref=f11e52] [cursor=pointer]
+      - generic [ref=f11e56]:
+        - generic [ref=f11e57]:
+          - generic:
+            - generic:
+              - img:
+                - generic:
+                  - generic [ref=f11e72] [cursor=pointer]
+                  - generic [ref=f11e73] [cursor=pointer]
+                  - generic [ref=f11e74] [cursor=pointer]
+                  - generic [ref=f11e75] [cursor=pointer]
+                  - generic [ref=f11e76] [cursor=pointer]
+                  - generic [ref=f11e77] [cursor=pointer]
+                  - generic [ref=f11e78] [cursor=pointer]
+          - generic:
+            - generic:
+              - generic [ref=f11e58]:
+                - button "Zoom in" [ref=f11e59] [cursor=pointer]: +
+                - button "Zoom out" [ref=f11e60] [cursor=pointer]: −
+              - generic [ref=f11e61]:
+                - link "Leaflet" [ref=f11e62] [cursor=pointer]:
+                  - /url: https://leafletjs.com
+                - text: "| ©"
+                - link "OpenStreetMap" [ref=f11e67] [cursor=pointer]:
+                  - /url: https://www.openstreetmap.org/copyright
+        - complementary "Filtros del mapa" [ref=f11e79]:
+          - generic [ref=f11e81]:
+            - heading "Explorar caminos" [level=2] [ref=f11e82]
+            - paragraph [ref=f11e83]: 11 de 11 tramos visibles
+          - generic [ref=f11e84]:
+            - generic [ref=f11e85]: Colorear por
+            - generic [ref=f11e86]:
+              - button "Estado" [pressed] [ref=f11e87] [cursor=pointer]
+              - button "Superficie" [ref=f11e88] [cursor=pointer]
+          - generic [ref=f11e89]:
+            - generic [ref=f11e90]: Buscar camino
+            - searchbox "Buscar camino" [ref=f11e92]
+          - generic [ref=f11e93]:
+            - generic [ref=f11e94]:
+              - generic [ref=f11e95]: Estado
+              - combobox "Estado" [ref=f11e96]:
+                - option "Todos" [selected]
+                - option "Transitable"
+                - option "Regular"
+                - option "Intransitable"
+                - option "En obra"
+            - generic [ref=f11e97]:
+              - generic [ref=f11e98]: Superficie
+              - combobox "Superficie" [ref=f11e99]:
+                - option "Todas" [selected]
+                - option "Tierra"
+                - option "Ripio"
+                - option "Enripiado mejorado"
+                - option "Pavimentado"
+          - generic [ref=f11e100]:
+            - generic [ref=f11e101]: Departamento
+            - combobox "Departamento" [ref=f11e102]:
+              - option "Todos los departamentos" [selected]
+              - option "Figueroa"
+              - option "Santiago"
+          - generic [ref=f11e103]:
+            - generic [ref=f11e104]:
+              - generic [ref=f11e105]:
+                - generic [ref=f11e106]: Puntos de interés
+                - paragraph [ref=f11e107]: Están ocultos. Tocá una categoría para verla en el mapa.
+              - button "Mostrar todos" [ref=f11e109] [cursor=pointer]
+            - generic [ref=f11e113]:
+              - button "Mostrar Hospital en el mapa" [ref=f11e114] [cursor=pointer]:
+                - generic [aria-hidden] [ref=f11e115]: H
+                - generic "Hospital" [ref=f11e116]
+                - generic [ref=f11e117]: Oculto · 65
+              - button "Mostrar Escuela en el mapa" [ref=f11e122] [cursor=pointer]:
+                - generic [aria-hidden] [ref=f11e123]: E
+                - generic "Escuela" [ref=f11e124]
+                - generic [ref=f11e125]: Oculto · 1601
+              - button "Mostrar UPA en el mapa" [ref=f11e130] [cursor=pointer]:
+                - generic [aria-hidden] [ref=f11e131]: U
+                - generic "UPA" [ref=f11e132]
+                - generic [ref=f11e133]: Oculto · 0
+          - generic [ref=f11e138]:
+            - button "Limpiar filtros" [disabled] [ref=f11e139]
+            - generic [ref=f11e140]: Santiago del Estero
+        - generic [ref=f11e142]:
+          - generic [ref=f11e143]:
+            - generic [ref=f11e144]:
+              - heading "Leyenda" [level=2] [ref=f11e145]
+              - paragraph [ref=f11e146]: Coloreando por estado
+            - button "Ocultar leyenda" [ref=f11e147] [cursor=pointer]
+          - list [ref=f11e150]:
+            - listitem [ref=f11e151]: Transitable
+            - listitem [ref=f11e153]: Regular
+            - listitem [ref=f11e155]: Intransitable
+            - listitem [ref=f11e157]: En obra
+          - generic [ref=f11e159]:
+            - paragraph [ref=f11e160]: La superficie se indica con el trazo
+            - list [ref=f11e161]:
+              - listitem [ref=f11e162]: Punteada
+              - listitem [ref=f11e164]: Guiones largos
+              - listitem [ref=f11e166]: Guion y punto
+              - listitem [ref=f11e168]: Continua
+          - generic [ref=f11e170]:
+            - paragraph [ref=f11e171]: Puntos de interés
+            - list [ref=f11e172]:
+              - listitem [ref=f11e173]:
+                - generic [aria-hidden] [ref=f11e174]: H
+                - text: Hospital
+              - listitem [ref=f11e175]:
+                - generic [aria-hidden] [ref=f11e176]: E
+                - text: Escuela
+              - listitem [ref=f11e177]:
+                - generic [aria-hidden] [ref=f11e178]: U
+                - text: UPA
+        - button "Mostrar puntos de interés 1666" [ref=f11e179] [cursor=pointer]:
+          - text: Mostrar puntos de interés
+          - generic [ref=f11e183]: "1666"

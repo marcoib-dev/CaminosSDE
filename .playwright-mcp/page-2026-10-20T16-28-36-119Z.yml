@@ -1,0 +1,48 @@
+- generic [ref=f4e3]:
+  - banner [ref=f4e4]:
+    - generic [ref=f4e5]:
+      - button "Abrir menú" [ref=f4e6] [cursor=pointer]
+      - link "Caminos Rurales de SDE Santiago del Estero" [ref=f4e9] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f4e13]:
+          - generic [ref=f4e14]: Caminos Rurales de SDE
+          - generic [ref=f4e15]: Santiago del Estero
+      - generic [ref=f4e16]:
+        - button "Cambiar a tema oscuro" [ref=f4e17] [cursor=pointer]
+        - link "Ingresar" [ref=f4e20] [cursor=pointer]:
+          - /url: /login
+  - complementary "Menú principal" [ref=f4e23]:
+    - navigation [ref=f4e24]:
+      - paragraph [ref=f4e25]: Menú principal
+      - link "Mapa" [ref=f4e26] [cursor=pointer]:
+        - /url: /
+      - link "Prioridades" [ref=f4e31] [cursor=pointer]:
+        - /url: /prioridades
+    - generic [ref=f4e36]:
+      - paragraph [ref=f4e37]: Acceso institucional
+      - paragraph [ref=f4e38]: Ingresá para editar caminos, tramos y puntos de interés.
+      - link "Ingresar" [ref=f4e39] [cursor=pointer]:
+        - /url: /login
+  - main [ref=f4e43]:
+    - generic [ref=f4e44]:
+      - generic [ref=f4e45]:
+        - generic [ref=f4e51]:
+          - heading "Mapa de Caminos Rurales" [level=1] [ref=f4e52]
+          - paragraph [ref=f4e53]: Cargando caminos…
+        - generic [ref=f4e54]:
+          - button "Actualizar" [disabled] [ref=f4e55]
+          - button "Filtros" [ref=f4e58] [cursor=pointer]
+      - generic [ref=f4e62]:
+        - generic [ref=f4e63]:
+          - generic:
+            - generic:
+              - generic [ref=f4e64]:
+                - button "Zoom in" [ref=f4e65] [cursor=pointer]: +
+                - button "Zoom out" [ref=f4e66] [cursor=pointer]: −
+              - generic [ref=f4e67]:
+                - link "Leaflet" [ref=f4e68] [cursor=pointer]:
+                  - /url: https://leafletjs.com
+                - text: "| ©"
+                - link "OpenStreetMap" [ref=f4e73] [cursor=pointer]:
+                  - /url: https://www.openstreetmap.org/copyright
+        - generic [ref=f4e74]: Cargando mapa…

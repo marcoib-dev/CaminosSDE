@@ -1,0 +1,84 @@
+- generic [ref=f6e3]:
+  - banner [ref=f6e4]:
+    - generic [ref=f6e5]:
+      - link "Caminos Rurales de SDE Santiago del Estero" [ref=f6e6] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f6e10]:
+          - generic [ref=f6e11]: Caminos Rurales de SDE
+          - generic [ref=f6e12]: Santiago del Estero
+      - generic [ref=f6e13]:
+        - button "Cambiar a tema oscuro" [ref=f6e14] [cursor=pointer]
+        - link "Ingresar" [ref=f6e17] [cursor=pointer]:
+          - /url: /login
+  - complementary "Menú principal" [ref=f6e20]:
+    - navigation [ref=f6e21]:
+      - paragraph [ref=f6e22]: Menú principal
+      - link "Mapa" [ref=f6e23] [cursor=pointer]:
+        - /url: /
+      - link "Prioridades" [ref=f6e28] [cursor=pointer]:
+        - /url: /prioridades
+    - generic [ref=f6e33]:
+      - paragraph [ref=f6e34]: Acceso institucional
+      - paragraph [ref=f6e35]: Ingresá para editar caminos, tramos y puntos de interés.
+      - link "Ingresar" [ref=f6e36] [cursor=pointer]:
+        - /url: /login
+  - main [ref=f6e40]:
+    - generic [ref=f6e42]:
+      - generic [ref=f6e43]:
+        - generic [ref=f6e44]:
+          - paragraph [ref=f6e45]: Toma de decisiones
+          - heading "Prioridades de intervención" [level=1] [ref=f6e46]
+          - paragraph [ref=f6e47]: Ranking de tramos según el estado de transitabilidad, la superficie y la cercanía a puntos de interés como hospitales, escuelas y UPAs.
+        - button "Actualizar" [disabled] [ref=f6e48]
+      - generic [ref=f6e51]:
+        - generic [ref=f6e54]:
+          - paragraph [ref=f6e55]: Tramos analizados
+          - paragraph [ref=f6e56]: "0"
+        - generic [ref=f6e64]:
+          - paragraph [ref=f6e65]: Puntaje promedio
+          - paragraph [ref=f6e66]: 0/100
+        - generic [ref=f6e74]:
+          - paragraph [ref=f6e75]: Prioridad muy alta
+          - paragraph [ref=f6e76]: "0"
+        - generic [ref=f6e83]:
+          - paragraph [ref=f6e84]: Red evaluada
+          - paragraph [ref=f6e85]: 0,0 km
+      - generic [ref=f6e89]:
+        - generic [ref=f6e90]: Cómo se calcula
+        - generic [ref=f6e91]:
+          - text: Estado
+          - strong [ref=f6e92]: "+50"
+        - generic [ref=f6e93]:
+          - text: Superficie
+          - strong [ref=f6e94]: "+20"
+        - generic [ref=f6e95]:
+          - text: Cercanía
+          - strong [ref=f6e96]: "+30"
+          - text: (1 km)
+        - generic [ref=f6e97]: Máximo 100 puntos.
+      - generic [ref=f6e99]:
+        - generic [ref=f6e100]:
+          - generic [ref=f6e101]: Buscar camino
+          - searchbox "Buscar camino" [ref=f6e103]
+        - generic [ref=f6e104]:
+          - generic [ref=f6e105]: Estado
+          - combobox "Estado" [ref=f6e106]:
+            - option "Todos" [selected]
+            - option "Transitable"
+            - option "Regular"
+            - option "Intransitable"
+            - option "En obra"
+        - generic [ref=f6e107]:
+          - generic [ref=f6e108]: Superficie
+          - combobox "Superficie" [ref=f6e109]:
+            - option "Todas" [selected]
+            - option "Tierra"
+            - option "Ripio"
+            - option "Enripiado mejorado"
+            - option "Pavimentado"
+        - generic [ref=f6e110]:
+          - generic [ref=f6e111]: Departamento
+          - combobox "Departamento" [ref=f6e112]:
+            - option "Todos" [selected]
+        - button "Limpiar" [disabled] [ref=f6e114]
+      - paragraph [ref=f6e116]: Calculando prioridades…

@@ -376,6 +376,7 @@ Los tests de integración con PostGIS requieren una base disponible y se ejecuta
 - La sincronización offline no incluye borrados ni subida de fotos.
 - La app usa un service worker manual; al cambiar la estrategia de caché hay que incrementar `VERSION` en `apps/web/public/sw.js`.
 
+
 ## Documentación de decisiones
 
 - [ADR 0001 — Monorepo con Next.js y Express](docs/adr/0001-monorepo-next-express.md)
@@ -383,3 +384,4 @@ Los tests de integración con PostGIS requieren una base disponible y se ejecuta
 - [ADR 0003 — Autenticación con Auth.js y JWT compartido](docs/adr/0003-auth-jwt-compartido.md)
 - [ADR 0004 — Cola offline y sincronización idempotente](docs/adr/0004-offline-primero.md)
 - [ADR 0005 — PWA con service worker propio](docs/adr/0005-pwa-service-worker.md)
+

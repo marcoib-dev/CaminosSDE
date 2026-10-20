@@ -1,0 +1,112 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - button "Abrir menú" [ref=e6] [cursor=pointer]
+      - link "Caminos Rurales de SDE Santiago del Estero" [ref=e9] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e13]:
+          - generic [ref=e14]: Caminos Rurales de SDE
+          - generic [ref=e15]: Santiago del Estero
+      - generic [ref=e16]:
+        - button "Cambiar a tema oscuro" [ref=e17] [cursor=pointer]
+        - link "Ingresar" [ref=e20] [cursor=pointer]:
+          - /url: /login
+  - complementary "Menú principal" [ref=e23]:
+    - navigation [ref=e24]:
+      - paragraph [ref=e25]: Menú principal
+      - link "Mapa" [ref=e26] [cursor=pointer]:
+        - /url: /
+      - link "Prioridades" [ref=e31] [cursor=pointer]:
+        - /url: /prioridades
+    - generic [ref=e36]:
+      - paragraph [ref=e37]: Acceso institucional
+      - paragraph [ref=e38]: Ingresá para editar caminos, tramos y puntos de interés.
+      - link "Ingresar" [ref=e39] [cursor=pointer]:
+        - /url: /login
+  - main [ref=e43]:
+    - generic [ref=e44]:
+      - generic [ref=e45]:
+        - generic [ref=e51]:
+          - heading "Mapa de Caminos Rurales" [level=1] [ref=e52]
+          - paragraph [ref=e53]: 0 de 0 tramos visibles
+        - generic [ref=e54]:
+          - button "Actualizar" [ref=e55] [cursor=pointer]
+          - button "Filtros" [ref=e58] [cursor=pointer]
+      - generic [ref=e62]:
+        - generic [ref=e63]:
+          - generic:
+            - generic:
+              - generic [ref=e64]:
+                - button "Zoom in" [ref=e65] [cursor=pointer]: +
+                - button "Zoom out" [ref=e66] [cursor=pointer]: −
+              - generic [ref=e67]:
+                - link "Leaflet" [ref=e68] [cursor=pointer]:
+                  - /url: https://leafletjs.com
+                - text: "| ©"
+                - link "OpenStreetMap" [ref=e73] [cursor=pointer]:
+                  - /url: https://www.openstreetmap.org/copyright
+        - complementary "Filtros del mapa":
+          - generic:
+            - generic:
+              - heading "Explorar caminos" [level=2]
+              - paragraph: 0 de 0 tramos visibles
+            - button "Cerrar filtros"
+          - generic:
+            - generic: Colorear por
+            - generic:
+              - button "Estado" [pressed]
+              - button "Superficie"
+          - generic:
+            - generic: Buscar camino
+            - generic:
+              - searchbox "Buscar camino"
+          - generic:
+            - generic:
+              - generic: Estado
+              - combobox "Estado":
+                - option "Todos" [selected]
+                - option "Transitable"
+                - option "Regular"
+                - option "Intransitable"
+                - option "En obra"
+            - generic:
+              - generic: Superficie
+              - combobox "Superficie":
+                - option "Todas" [selected]
+                - option "Tierra"
+                - option "Ripio"
+                - option "Enripiado mejorado"
+                - option "Pavimentado"
+          - generic:
+            - generic: Departamento
+            - combobox "Departamento":
+              - option "Todos los departamentos" [selected]
+          - generic:
+            - generic:
+              - generic:
+                - generic: Puntos de interés
+                - paragraph: Están ocultos. Tocá una categoría para verla en el mapa.
+              - generic:
+                - button "Mostrar todos"
+            - generic:
+              - button "Mostrar Hospital en el mapa":
+                - generic [aria-hidden]: H
+                - generic "Hospital"
+                - generic: Oculto · 65
+              - button "Mostrar Escuela en el mapa":
+                - generic [aria-hidden]: E
+                - generic "Escuela"
+                - generic: Oculto · 1601
+              - button "Mostrar UPA en el mapa":
+                - generic [aria-hidden]: U
+                - generic "UPA"
+                - generic: Oculto · 0
+          - generic:
+            - button "Limpiar filtros" [disabled]
+            - generic: Santiago del Estero
+        - button "Leyenda" [ref=e79] [cursor=pointer]
+        - button "Mostrar puntos de interés 1666" [ref=e82] [cursor=pointer]:
+          - text: Mostrar puntos de interés
+          - generic [ref=e86]: "1666"
+        - generic:
+          - paragraph: Todavía no hay caminos cargados. Los tramos aparecerán acá cuando se den de alta.

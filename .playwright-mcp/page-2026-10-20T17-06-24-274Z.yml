@@ -1,0 +1,47 @@
+- generic [ref=f20e3]:
+  - banner [ref=f20e4]:
+    - generic [ref=f20e5]:
+      - link "Caminos Rurales de SDE Santiago del Estero" [ref=f20e6] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f20e10]:
+          - generic [ref=f20e11]: Caminos Rurales de SDE
+          - generic [ref=f20e12]: Santiago del Estero
+      - generic [ref=f20e13]:
+        - button "Cambiar a tema oscuro" [ref=f20e14] [cursor=pointer]
+        - link "Ingresar" [ref=f20e17] [cursor=pointer]:
+          - /url: /login
+  - complementary "Menú principal" [ref=f20e20]:
+    - navigation [ref=f20e21]:
+      - paragraph [ref=f20e22]: Menú principal
+      - link "Mapa" [ref=f20e23] [cursor=pointer]:
+        - /url: /
+      - link "Prioridades" [ref=f20e28] [cursor=pointer]:
+        - /url: /prioridades
+    - generic [ref=f20e33]:
+      - paragraph [ref=f20e34]: Acceso institucional
+      - paragraph [ref=f20e35]: Ingresá para editar caminos, tramos y puntos de interés.
+      - link "Ingresar" [ref=f20e36] [cursor=pointer]:
+        - /url: /login
+  - main [ref=f20e40]:
+    - generic [ref=f20e41]:
+      - generic [ref=f20e42]:
+        - generic [ref=f20e48]:
+          - heading "Mapa de Caminos Rurales" [level=1] [ref=f20e49]
+          - paragraph [ref=f20e50]: Cargando caminos…
+        - button "Actualizar" [disabled] [ref=f20e52]
+      - generic [ref=f20e56]:
+        - generic [ref=f20e57]:
+          - generic:
+            - generic:
+              - generic [ref=f20e58]:
+                - button "Zoom in" [ref=f20e59] [cursor=pointer]: +
+                - button "Zoom out" [ref=f20e60] [cursor=pointer]: −
+              - generic [ref=f20e61]:
+                - link "Leaflet" [ref=f20e62] [cursor=pointer]:
+                  - /url: https://leafletjs.com
+                - text: "| ©"
+                - link "OpenStreetMap" [ref=f20e67] [cursor=pointer]:
+                  - /url: https://www.openstreetmap.org/copyright
+        - generic [ref=f20e69]:
+          - generic [ref=f20e71]: Despertando la base de datos… (puede tardar unos segundos)
+          - generic [ref=f20e72]: El servidor gratuito se apaga por inactividad. La primera carga tarda más.

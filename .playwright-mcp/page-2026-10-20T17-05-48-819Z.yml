@@ -1,0 +1,21 @@
+- generic [ref=f17e5]:
+  - generic [ref=f17e6]:
+    - generic [ref=f17e7]:
+      - heading "Caminos Rurales de SDE" [level=1] [ref=f17e12]
+      - heading "Iniciar Sesión" [level=2] [ref=f17e13]
+      - paragraph [ref=f17e14]: Accede a tu cuenta
+    - generic [ref=f17e15]:
+      - generic [ref=f17e16]:
+        - generic [ref=f17e17]: Email
+        - textbox "Email" [active] [ref=f17e19]:
+          - /placeholder: tu@email.com
+      - generic [ref=f17e20]:
+        - generic [ref=f17e21]: Contraseña
+        - textbox "Contraseña" [ref=f17e23]:
+          - /placeholder: ••••••••
+      - button "Iniciar Sesión" [ref=f17e24] [cursor=pointer]
+    - generic [ref=f17e25]:
+      - paragraph [ref=f17e26]: ¿Tienes problemas para iniciar sesión?
+      - paragraph [ref=f17e27]: Contacta con un administrador para obtener ayuda
+  - link "← Volver al inicio" [ref=f17e29] [cursor=pointer]:
+    - /url: /
