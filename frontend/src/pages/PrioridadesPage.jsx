@@ -100,6 +100,7 @@ export default function PrioridadesPage() {
   const navegar = useNavigate();
   const [tramos, setTramos] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [despertando, setDespertando] = useState(false);
   const [error, setError] = useState('');
   const [filtros, setFiltros] = useState(FILTROS_INICIALES);
 
@@ -119,6 +120,16 @@ export default function PrioridadesPage() {
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  // Mensaje de "despertando" si la carga tarda más de 3s (cold start)
+  useEffect(() => {
+    if (!cargando) {
+      setDespertando(false);
+      return;
+    }
+    const timer = setTimeout(() => setDespertando(true), 3000);
+    return () => clearTimeout(timer);
+  }, [cargando]);
 
   const tramosConPosicion = useMemo(
     () => tramos.map((tramo, indice) => ({ ...tramo, posicion: indice + 1 })),
@@ -389,6 +400,19 @@ export default function PrioridadesPage() {
 
         {cargando && !error ? (
           <div className="mt-3 space-y-2">
+            <div className="tarjeta p-6 text-center animate-pulse">
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-cyan-600/30 border-t-cyan-600 mx-auto mb-2 dark:border-cyan-300/30 dark:border-t-cyan-300" />
+              <p className="text-sm font-medium text-stone-700 dark:text-stone-200">
+                {despertando
+                  ? 'Despertando la base de datos… (puede tardar unos segundos)'
+                  : 'Calculando prioridades…'}
+              </p>
+              {despertando && (
+                <p className="mt-1 text-xs text-stone-500 dark:text-stone-400 max-w-xs mx-auto">
+                  El servidor gratuito se apaga por inactividad. La primera carga tarda más.
+                </p>
+              )}
+            </div>
             {[0, 1, 2, 3, 4].map((item) => (
               <div key={item} className="tarjeta h-16 animate-pulse bg-white/60 dark:bg-white/5" />
             ))}

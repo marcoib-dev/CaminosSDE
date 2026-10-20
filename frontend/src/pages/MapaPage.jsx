@@ -73,6 +73,7 @@ export default function MapaPage() {
   const [modalLista, setModalLista] = useState(false);
   const [modalCategorias, setModalCategorias] = useState(false);
   const [mensaje, setMensaje] = useState('');
+  const [despertando, setDespertando] = useState(false);
 
   const cargar = useCallback(async (opciones = {}) => {
     const silencioso = opciones?.silencioso === true;
@@ -113,6 +114,16 @@ export default function MapaPage() {
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  // Mensaje de "despertando" si la carga inicial tarda más de 3s (cold start Render/Neon)
+  useEffect(() => {
+    if (!cargando) {
+      setDespertando(false);
+      return;
+    }
+    const timer = setTimeout(() => setDespertando(true), 3000);
+    return () => clearTimeout(timer);
+  }, [cargando]);
 
   // Precarga en background de puntos de interés (después de que el mapa esté listo)
   useEffect(() => {
@@ -706,9 +717,18 @@ export default function MapaPage() {
 
       {cargando ? (
         <div className="absolute inset-0 z-[1200] flex items-center justify-center bg-arena-50/70 backdrop-blur-sm dark:bg-slate-950/70">
-          <div className="tarjeta flex items-center gap-3 px-5 py-4">
+          <div className="tarjeta flex flex-col items-center gap-3 px-5 py-4">
             <span className="h-5 w-5 animate-spin rounded-full border-2 border-cyan-600/30 border-t-cyan-600 dark:border-cyan-300/30 dark:border-t-cyan-300" />
-            <span className="text-sm font-medium text-stone-700 dark:text-stone-200">Cargando mapa…</span>
+            <span className="text-sm font-medium text-stone-700 dark:text-stone-200">
+              {despertando
+                ? 'Despertando la base de datos… (puede tardar unos segundos)'
+                : 'Cargando mapa…'}
+            </span>
+            {despertando && (
+              <span className="text-xs text-stone-500 dark:text-stone-400 text-center max-w-xs">
+                El servidor gratuito se apaga por inactividad. La primera carga tarda más.
+              </span>
+            )}
           </div>
         </div>
       ) : null}
