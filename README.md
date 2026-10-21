@@ -711,7 +711,7 @@ Cada elemento de la respuesta incluye los datos del tramo, los datos básicos de
 | Ruta | Acceso | Descripción |
 |---|---|---|
 | `/` | Público | Mapa a pantalla completa. Para EDITOR y ADMIN suma las herramientas de edición. |
-| `/prioridades` | Público | Ranking de tramos por puntaje, con filtros y acceso al mapa. |
+| `/prioridades` | Público | Ranking de tramos por puntaje, con filtros, detalle de puntos de interés cercanos y acceso al mapa. |
 | `/login` | Público | Formulario de ingreso con email y contraseña. |
 | `/perfil` | Autenticado | Datos de la cuenta y cambio de contraseña. |
 | `/sugerencias` | EDITOR / ADMIN | Revisión de sugerencias ciudadanas. |
@@ -724,6 +724,12 @@ El encabezado cambia según la sesión y el rol: el lector ve Mapa y Prioridades
 ### Mapa público
 
 Mapa de pantalla completa con OpenStreetMap, panel de filtros por estado, superficie, departamento y búsqueda por nombre; selector "Colorear por" estado o superficie (por defecto, estado); leyenda; marcadores de puntos de interés agrupados en clusters según el nivel de zoom. Los puntos están **ocultos por defecto**: se muestran al tocar una categoría en la sección **Explorar caminos**, con un botón flotante **Mostrar puntos de interés** cuando no hay ninguna visible. Al hacer clic en un tramo se muestra un popup con el camino, localidad, longitud del tramo y total del camino, estado, superficie, puntaje de prioridad, fotos y el formulario **Sugerir un cambio** (`POST /api/sugerencias`).
+
+El panel **Explorar caminos** se puede ocultar con el botón **Ocultar filtros** de la cabecera o con la flecha de su encabezado. Cuando está oculto, se vuelve a abrir desde el botón **Mostrar filtros** de la cabecera o desde el botón que aparece junto a la leyenda. El mapa incluye además un botón de **pantalla completa** en la esquina superior derecha, que expande únicamente el mapa y se cierra con el mismo botón o con `Esc`.
+
+### Ranking de prioridades
+
+La pantalla `/prioridades` muestra el ranking de tramos con filtros por camino, estado, superficie y departamento. La columna **Cercanía** resume los puntos de interés próximos (`+N` cuando hay más de dos); al hacer clic se abre un detalle con **todos** los puntos dentro del umbral, indicando categoría, distancia al tramo y aporte al puntaje, con acceso directo para ver el tramo en el mapa.
 
 ### Edición en el mapa
 
