@@ -178,6 +178,11 @@ async function main() {
     });
   }
 
+  if (process.env.SEED_SIN_DEMO === 'true') {
+    console.log('Datos de ejemplo omitidos (SEED_SIN_DEMO=true).');
+    return;
+  }
+
   for (const datos of caminosDemo) {
     const existente = await prisma.camino.findFirst({
       where: { nombre: datos.nombre, departamento: datos.departamento },

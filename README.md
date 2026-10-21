@@ -7,7 +7,7 @@ Este repositorio contiene el **backend** (API REST) y el **frontend** (mapa púb
 ## Stack
 
 - Node.js 22+ con Express 5 y ES Modules. La importación de `.gpkg` usa `better-sqlite3` 13 (dependencia de `@ngageoint/geopackage`), que requiere Node 22 o superior.
-- PostgreSQL (Neon en producción) con Prisma ORM.
+- PostgreSQL (Neon o un contenedor Docker en producción) con Prisma ORM.
 - Autenticación con JWT y bcrypt.
 - Validación de datos con zod.
 - Cálculo y división de geometrías con `@turf/turf`.
@@ -18,7 +18,9 @@ Este repositorio contiene el **backend** (API REST) y el **frontend** (mapa púb
 ## Estructura
 
 ```text
-docker-compose.yaml      PostgreSQL local para desarrollo
+docker-compose.yaml        PostgreSQL local para desarrollo
+docker-compose.prod.yaml   Stack completo para producción (Nginx, API y PostgreSQL)
+.env.produccion.example    Variables del despliegue con Docker
 
 backend/
   prisma/
@@ -37,6 +39,7 @@ backend/
     server.js            Arranque del servidor
   ejemplos/              Archivos .kml y .gpkg de prueba para importar
   scripts/               Generador de los archivos de ejemplo
+  Dockerfile             Imagen de la API para producción
 
 frontend/
   src/
@@ -53,6 +56,8 @@ frontend/
     main.jsx             Punto de entrada
   index.html
   tailwind.config.js
+  Dockerfile             Build de Vite + Nginx
+  nginx.conf             Rutas de React Router y proxy /api/ al backend
 ```
 
 ## Requisitos
@@ -188,7 +193,9 @@ El frontend usa una única variable, definida en `frontend/.env`:
 
 | Variable | Obligatoria | Descripción |
 |---|---|---|
-| `VITE_API_URL` | No | URL base de la API, incluido `/api`. Por defecto `http://localhost:3000/api`. En producción, la URL del backend en Render. |
+| `VITE_API_URL` | No | URL base de la API, incluido `/api`. Por defecto `http://localhost:3000/api`. En el despliegue con Docker se deja en `/api`, porque Nginx redirige esa ruta al backend. |
+
+En el despliegue con Docker las variables del backend se definen en `.env.produccion`; ver [Despliegue con Docker](#despliegue-con-docker).
 
 ### Scripts
 
@@ -201,7 +208,7 @@ Backend:
 | `npm run prisma:generate` | Genera el cliente de Prisma. |
 | `npm run prisma:migrate` | Ejecuta `prisma migrate dev`. |
 | `npm run prisma:studio` | Abre Prisma Studio. |
-| `npm run seed` | Crea el ADMIN inicial, las categorías base, 3 caminos y 3 puntos de interés de ejemplo. |
+| `npm run seed` | Crea el ADMIN inicial y las categorías base. Con `SEED_SIN_DEMO=true` omite los 3 caminos y 3 puntos de ejemplo. |
 | `npm run ejemplos:importacion` | Regenera los archivos `.kml` y `.gpkg` de `ejemplos/` para probar la importación. |
 | `npm run puntos:importar -- --archivo <ruta>` | Importa hospitales, escuelas y UPAs desde GeoJSON o KML. Ver [Importar hospitales y escuelas](#importar-hospitales-y-escuelas). |
 
@@ -212,6 +219,137 @@ Frontend:
 | `npm run dev` | Inicia Vite en modo desarrollo. |
 | `npm run build` | Genera la compilación de producción en `dist/`. |
 | `npm run preview` | Sirve localmente la compilación de producción. |
+
+## Despliegue con Docker
+
+`docker-compose.prod.yaml` levanta la aplicación completa en un servidor:
+
+| Servicio | Imagen / build | Función |
+|---|---|---|
+| `frontend` | `frontend/Dockerfile` (Node 22 + Nginx) | Compila React y sirve `dist/`. Publica `HTTP_PORT` (80 por defecto) y redirige `/api/` al backend. |
+| `backend` | `backend/Dockerfile` (Node 22) | API Express. Al arrancar aplica las migraciones de Prisma y luego inicia el servidor. No publica puertos: solo es accesible desde la red interna. |
+| `postgres` | `postgres:16-alpine` | Base de datos con el volumen `postgres_data`. No publica puertos. |
+
+El frontend y la API quedan bajo el **mismo origen** (`https://tu-dominio.com/api/...`), así que no hay que configurar CORS entre dominios distintos ni exponer el backend a internet.
+
+### Requisitos del servidor
+
+- Docker Engine 24 o superior con Docker Compose v2 (`docker compose version`).
+- **2 GB de RAM** como mínimo y 4 GB recomendados. La importación de `.gpkg` trabaja en memoria y el build del frontend consume cerca de 1 GB.
+- **20 GB de disco**. Las fotos no se guardan en el servidor: van a Cloudinary.
+- Puertos 80 y 443 abiertos si el servidor publica el sitio directamente.
+- No hace falta instalar Node.js ni PostgreSQL en el host: todo corre en contenedores.
+
+### 1. Preparar las variables
+
+```bash
+cp .env.produccion.example .env.produccion
+```
+
+Editar `.env.produccion`:
+
+| Variable | Detalle |
+|---|---|
+| `POSTGRES_PASSWORD` | Contraseña larga. Usá solo letras, números y guiones: se inserta dentro de `DATABASE_URL` y los caracteres `@ : / #` la rompen. |
+| `JWT_SECRET` | 32 caracteres o más, aleatorios. Generarlo con `openssl rand -hex 32`. |
+| `FRONTEND_URL` | Origen público exacto, por ejemplo `https://caminos.example.gob.ar`. Si no coincide con el dominio real, las peticiones con `Origin` (login, altas, ediciones) se rechazan por CORS. |
+| `ADMIN_NOMBRE`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Credenciales del administrador que crea el seed. |
+| `SEED_SIN_DEMO` | `true` para crear solo el ADMIN y las categorías base, sin caminos ni puntos de ejemplo. |
+| `CLOUDINARY_*` | Sin estos valores la API responde `503` al firmar subidas de fotos. |
+| `HTTP_PORT` | Puerto del host publicado por Nginx. 80 por defecto. |
+| `VITE_API_URL` | Dejar en `/api`: se compila dentro del frontend y Nginx lo redirige al backend. |
+
+`.env.produccion` está ignorado por git y no debe commitearse.
+
+### 2. Construir y levantar
+
+```bash
+docker compose --env-file .env.produccion -f docker-compose.prod.yaml up -d --build
+```
+
+La primera construcción descarga dependencias y puede tardar unos minutos. El backend ejecuta `prisma migrate deploy` en cada arranque, así que las migraciones se aplican solas.
+
+Verificar que los servicios estén sanos:
+
+```bash
+docker compose --env-file .env.produccion -f docker-compose.prod.yaml ps
+docker compose --env-file .env.produccion -f docker-compose.prod.yaml logs -f backend
+```
+
+`postgres` y `backend` deben figurar como `healthy`. Luego abrir `http://<ip-del-servidor>` (o `http://<ip>:<HTTP_PORT>`) y comprobar la API:
+
+```bash
+curl http://localhost/api/health
+```
+
+Si cambiaste `HTTP_PORT`, usá `curl http://localhost:<HTTP_PORT>/api/health`.
+
+### 3. Crear el administrador inicial
+
+```bash
+docker compose --env-file .env.produccion -f docker-compose.prod.yaml exec backend npm run seed
+```
+
+El seed es idempotente: se puede volver a ejecutar sin duplicar datos. Con `SEED_SIN_DEMO=true` crea el ADMIN y las categorías base; con `false` agrega además 3 caminos y 3 puntos de ejemplo. Después del primer ingreso, cambiá la contraseña desde `/perfil`.
+
+### 4. Actualizar el proyecto
+
+```bash
+git pull
+docker compose --env-file .env.produccion -f docker-compose.prod.yaml up -d --build
+```
+
+Se recompila el frontend y se recrean solo los contenedores cuya imagen cambió; las migraciones nuevas se aplican al reiniciar el backend. Recordá que `VITE_API_URL` se congela en el build: si la cambiás, hay que reconstruir el frontend.
+
+### HTTPS
+
+El Nginx del contenedor escucha HTTP. Hay dos opciones:
+
+1. **Proxy con TLS delante (recomendado).** Instalá Caddy o Nginx con Certbot en el host, poné `HTTP_PORT=8080` en `.env.produccion` y apuntá el proxy a `127.0.0.1:8080`. Ejemplo de `Caddyfile`:
+
+   ```caddy
+   caminos.example.gob.ar {
+       reverse_proxy 127.0.0.1:8080
+   }
+   ```
+
+2. **Certificados en el host con Certbot** publicando el puerto 80 del contenedor y montando los certificados en un Nginx del host.
+
+En ambos casos `FRONTEND_URL` debe ser la URL pública con `https://`.
+
+### Copias de seguridad
+
+```bash
+docker compose --env-file .env.produccion -f docker-compose.prod.yaml exec -T postgres \
+  pg_dump -U caminos -d caminos_rurales > respaldo-$(date +%F).sql
+```
+
+Para restaurar (sobre una base vacía):
+
+```bash
+cat respaldo-2026-01-01.sql | docker compose --env-file .env.produccion -f docker-compose.prod.yaml exec -T postgres \
+  psql -U caminos -d caminos_rurales
+```
+
+Si cambiaste `POSTGRES_USER` o `POSTGRES_DB`, ajustá el usuario y el nombre de la base en los comandos.
+
+### Comandos útiles
+
+| Comando | Qué hace |
+|---|---|
+| `docker compose --env-file .env.produccion -f docker-compose.prod.yaml logs -f frontend backend` | Sigue los logs del frontend y la API. |
+| `docker compose --env-file .env.produccion -f docker-compose.prod.yaml restart backend` | Reinicia la API. |
+| `docker compose --env-file .env.produccion -f docker-compose.prod.yaml down` | Detiene el stack y conserva la base. |
+| `docker compose --env-file .env.produccion -f docker-compose.prod.yaml down -v` | Detiene el stack y **borra la base de datos**. |
+| `docker compose --env-file .env.produccion -f docker-compose.prod.yaml exec postgres psql -U caminos -d caminos_rurales` | Abre la consola SQL. |
+
+### Notas
+
+- **Una sola instancia del backend**: el límite de sugerencias (5 cada 15 minutos) se guarda en memoria del proceso. Con varias réplicas, cada una lleva su propio contador.
+- **Tamaño de las subidas**: Nginx acepta hasta 30 MB (`frontend/nginx.conf`) para cubrir el `.gpkg` de 25 MB y el JSON de confirmación de 10 MB. Si cambiás esos límites en el backend, actualizá también Nginx.
+- **Importación pesada**: es síncrona y consume RAM. En un servidor de 2 GB, evitá importar varios archivos grandes a la vez.
+- **Sin volumen para fotos**: las imágenes se guardan en Cloudinary; en la base solo queda la URL.
+- **Puertos internos**: `postgres` y `backend` no se publican al host, solo Nginx.
 
 ## Autenticación
 

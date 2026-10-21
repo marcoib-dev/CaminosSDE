@@ -36,7 +36,9 @@ export class ErrorApi extends Error {
 }
 
 function construirUrl(ruta, parametros = {}) {
-  const url = new URL(`${URL_BASE}${ruta}`);
+  // VITE_API_URL puede ser absoluta (http://localhost:3000/api) o relativa
+  // (/api, mismo origen). El segundo argumento resuelve las relativas.
+  const url = new URL(`${URL_BASE}${ruta}`, window.location.origin);
 
   Object.entries(parametros).forEach(([clave, valor]) => {
     if (valor === undefined || valor === null || valor === '') return;

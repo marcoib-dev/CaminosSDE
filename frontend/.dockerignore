@@ -1,0 +1,11 @@
+node_modules
+dist
+npm-debug.log*
+
+# El build usa el argumento VITE_API_URL, no los .env locales.
+.env
+.env.*
+.env.local
+
+.vercel
+vercel.json

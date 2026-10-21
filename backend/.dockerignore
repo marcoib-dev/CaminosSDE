@@ -1,0 +1,12 @@
+node_modules
+npm-debug.log*
+
+# Variables de entorno: las inyecta docker compose.
+.env
+.env.*
+
+# Datos y utilidades que no se usan en tiempo de ejecución.
+datos
+ejemplos
+scripts
+prisma/*.db

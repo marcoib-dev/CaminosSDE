@@ -1,0 +1,82 @@
+# Producción: Nginx + frontend, API Node y PostgreSQL.
+#
+# Uso:
+#   docker compose --env-file .env.produccion -f docker-compose.prod.yaml up -d --build
+#
+# El detalle de cada paso está en el README (sección "Despliegue con Docker").
+name: caminos-rurales-prod
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-caminos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Definí POSTGRES_PASSWORD en .env.produccion}
+      POSTGRES_DB: ${POSTGRES_DB:-caminos_rurales}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - interna
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-caminos}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-caminos_rurales}?schema=public
+      JWT_SECRET: ${JWT_SECRET:?Definí JWT_SECRET en .env.produccion}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      FRONTEND_URL: ${FRONTEND_URL:?Definí FRONTEND_URL en .env.produccion}
+      PRIORIDAD_UMBRAL_KM: ${PRIORIDAD_UMBRAL_KM:-1}
+      ADMIN_NOMBRE: ${ADMIN_NOMBRE:-Administrador}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      SEED_SIN_DEMO: ${SEED_SIN_DEMO:-false}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - interna
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    depends_on:
+      - backend
+    networks:
+      - interna
+
+volumes:
+  postgres_data:
+
+networks:
+  interna:
+    driver: bridge
