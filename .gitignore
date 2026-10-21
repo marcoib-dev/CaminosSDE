@@ -16,6 +16,7 @@ npm-debug.log*
 
 # Herramientas de desarrollo
 .playwright-mcp/
+.tools/
 .vercel/
 
 # Sistema operativo

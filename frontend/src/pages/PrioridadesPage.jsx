@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Modal from '../components/Modal.jsx';
 import PuntajePrioridad from '../components/PuntajePrioridad.jsx';
 import {
   ESTADOS,
@@ -63,7 +64,17 @@ function IconoRed({ className = 'h-4 w-4' }) {
   );
 }
 
-function PuntosCercanos({ puntos = [] }) {
+function formatearDistancia(valor) {
+  const numero = Number(valor);
+  if (!Number.isFinite(numero)) return '—';
+  if (numero < 1) return `${Math.round(numero * 1000)} m`;
+  return `${numero.toLocaleString('es-AR', {
+    minimumFractionDigits: Number.isInteger(numero) ? 0 : 2,
+    maximumFractionDigits: 2,
+  })} km`;
+}
+
+function PuntosCercanos({ puntos = [], onAbrir }) {
   const { porClave } = useCategorias();
 
   if (puntos.length === 0) {
@@ -71,13 +82,18 @@ function PuntosCercanos({ puntos = [] }) {
   }
 
   const nombres = puntos.slice(0, 2).map((punto) => punto.nombre);
+  const restantes = Math.max(0, puntos.length - 2);
+  const descripcion = `Ver ${puntos.length === 1 ? 'el punto de interés cercano' : `los ${puntos.length} puntos de interés cercanos`}`;
 
   return (
-    <span
-      className="inline-flex max-w-[15rem] items-center gap-1.5 text-xs text-stone-600 dark:text-stone-300"
-      title={puntos.map((punto) => punto.nombre).join(', ')}
+    <button
+      type="button"
+      onClick={onAbrir}
+      aria-haspopup="dialog"
+      title={`${descripcion}: ${puntos.map((punto) => punto.nombre).join(', ')}`}
+      className="group inline-flex max-w-[15rem] items-center gap-1.5 rounded-lg py-1 pl-1 pr-1.5 text-left text-xs text-stone-600 transition hover:bg-verde-50 hover:text-verde-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-verde-600 dark:text-stone-300 dark:hover:bg-white/10 dark:hover:text-verde-200 dark:focus-visible:outline-verde-300"
     >
-      <span className="flex -space-x-1" aria-hidden="true">
+      <span className="flex shrink-0 -space-x-1" aria-hidden="true">
         {puntos.slice(0, 3).map((punto) => (
           <span
             key={punto.id}
@@ -90,9 +106,89 @@ function PuntosCercanos({ puntos = [] }) {
       </span>
       <span className="truncate">
         {nombres.join(', ')}
-        {puntos.length > 2 ? ` +${puntos.length - 2}` : ''}
+        {restantes > 0 ? ` +${restantes}` : ''}
       </span>
-    </span>
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        className="h-3 w-3 shrink-0 text-stone-400 transition group-hover:text-verde-700 dark:text-stone-500 dark:group-hover:text-verde-300"
+        aria-hidden="true"
+      >
+        <path d="m9 6 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <span className="sr-only">— {descripcion}</span>
+    </button>
+  );
+}
+
+function DetallePuntosCercanos({ tramo, onCerrar, onVerEnMapa }) {
+  const { porClave } = useCategorias();
+  const prioridad = tramo?.prioridad;
+  const puntos = prioridad?.puntosCercanos ?? [];
+  const umbral = prioridad?.umbralCercaniaKm ?? 1;
+
+  return (
+    <Modal
+      titulo="Puntos de interés cercanos"
+      descripcion={`${tramo?.camino?.nombre ?? 'Tramo'}${tramo?.camino?.localidad ? ` · ${tramo.camino.localidad}` : ''}`}
+      onCerrar={onCerrar}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-verde-50/80 px-3 py-2.5 text-xs text-verde-900 dark:bg-verde-950/30 dark:text-verde-100">
+        <span>
+          Puntos a menos de <strong className="font-bold">{formatearDistancia(umbral)}</strong> del tramo.
+        </span>
+        <span className="rounded-full bg-white/80 px-2 py-0.5 font-semibold tabular-nums dark:bg-white/10">
+          Cercanía +{prioridad?.cercania ?? 0}
+        </span>
+      </div>
+
+      <ul className="mt-3 space-y-2">
+        {puntos.map((punto) => {
+          const categoria = porClave[punto.categoria];
+
+          return (
+            <li
+              key={punto.id}
+              className="flex items-start gap-3 rounded-xl border border-arena-200/80 p-3 dark:border-white/10"
+            >
+              <span
+                className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
+                style={{ backgroundColor: categoria?.color ?? '#78716c' }}
+                aria-hidden="true"
+              >
+                {categoria?.inicial ?? '?'}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-stone-900 dark:text-white">
+                  {punto.nombre}
+                </p>
+                <p className="text-xs text-stone-500 dark:text-stone-400">
+                  {categoria?.etiqueta ?? punto.categoria}
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-xs font-semibold tabular-nums text-stone-700 dark:text-stone-200">
+                  {formatearDistancia(punto.distanciaKm)}
+                </p>
+                {punto.aporte ? (
+                  <p className="text-[10px] font-medium tabular-nums text-verde-700 dark:text-verde-300">
+                    +{punto.aporte} pts
+                  </p>
+                ) : null}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="mt-4 flex justify-end">
+        <button type="button" onClick={onVerEnMapa} className="boton-suave px-3 py-2 text-xs">
+          Ver el tramo en el mapa
+        </button>
+      </div>
+    </Modal>
   );
 }
 
@@ -103,6 +199,7 @@ export default function PrioridadesPage() {
   const [despertando, setDespertando] = useState(false);
   const [error, setError] = useState('');
   const [filtros, setFiltros] = useState(FILTROS_INICIALES);
+  const [detalleCercania, setDetalleCercania] = useState(null);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -185,6 +282,7 @@ export default function PrioridadesPage() {
   const hayFiltros = Object.values(filtros).some(Boolean);
 
   const verEnMapa = (id) => {
+    setDetalleCercania(null);
     navegar(`/?tramo=${encodeURIComponent(id)}`);
   };
 
@@ -483,7 +581,10 @@ export default function PrioridadesPage() {
                             {formatearKm(tramo.longitudKm)}
                           </td>
                           <td className="px-4 py-3">
-                            <PuntosCercanos puntos={tramo.prioridad?.puntosCercanos} />
+                            <PuntosCercanos
+                              puntos={tramo.prioridad?.puntosCercanos}
+                              onAbrir={() => setDetalleCercania(tramo)}
+                            />
                           </td>
                           <td className="px-4 py-3 text-right">
                             <button
@@ -540,7 +641,10 @@ export default function PrioridadesPage() {
                           {formatearKm(tramo.longitudKm)}
                         </span>
                       </div>
-                      <PuntosCercanos puntos={tramo.prioridad?.puntosCercanos} />
+                      <PuntosCercanos
+                        puntos={tramo.prioridad?.puntosCercanos}
+                        onAbrir={() => setDetalleCercania(tramo)}
+                      />
                     </div>
 
                     <button
@@ -557,6 +661,14 @@ export default function PrioridadesPage() {
           </>
         ) : null}
       </div>
+
+      {detalleCercania ? (
+        <DetallePuntosCercanos
+          tramo={detalleCercania}
+          onCerrar={() => setDetalleCercania(null)}
+          onVerEnMapa={() => verEnMapa(detalleCercania.id)}
+        />
+      ) : null}
     </div>
   );
 }

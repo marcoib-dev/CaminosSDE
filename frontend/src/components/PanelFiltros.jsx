@@ -39,6 +39,7 @@ export default function PanelFiltros({
   onAdministrarCategorias,
   abierto,
   onCerrar,
+  onOcultarPanel,
   onLimpiar,
   cargandoPuntos = false,
 }) {
@@ -69,16 +70,31 @@ export default function PanelFiltros({
             {tramosVisibles} de {totalTramos} tramos visibles
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onCerrar}
-          className="rounded-lg p-1.5 text-stone-500 transition hover:bg-stone-900/5 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white lg:hidden"
-          aria-label="Cerrar filtros"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" aria-hidden="true">
-            <path d="m6 6 12 12M18 6 6 18" strokeLinecap="round" />
-          </svg>
-        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={onCerrar}
+            className="rounded-lg p-1.5 text-stone-500 transition hover:bg-stone-900/5 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white lg:hidden"
+            aria-label="Cerrar filtros"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" aria-hidden="true">
+              <path d="m6 6 12 12M18 6 6 18" strokeLinecap="round" />
+            </svg>
+          </button>
+          {onOcultarPanel ? (
+            <button
+              type="button"
+              onClick={onOcultarPanel}
+              className="hidden rounded-lg p-1.5 text-stone-500 transition hover:bg-stone-900/5 hover:text-stone-800 lg:inline-flex dark:text-stone-400 dark:hover:bg-white/10 dark:hover:text-white"
+              aria-label="Ocultar panel de filtros"
+              title="Ocultar panel"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4" aria-hidden="true">
+                <path d="m14 7-5 5 5 5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="mt-4">

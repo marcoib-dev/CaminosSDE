@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Leyenda from '../components/Leyenda.jsx';
 import Mapa from '../components/Mapa.jsx';
@@ -45,6 +45,28 @@ function IconoOjo({ tachado = false }) {
   );
 }
 
+function IconoPanel({ oculto = false }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M9 4v16" />
+      {oculto ? <path d="m13 9 3 3-3 3" strokeLinecap="round" strokeLinejoin="round" /> : <path d="m16 9-3 3 3 3" strokeLinecap="round" strokeLinejoin="round" />}
+    </svg>
+  );
+}
+
+function IconoPantallaCompleta({ salir = false }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4" aria-hidden="true">
+      {salir ? (
+        <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" strokeLinecap="round" strokeLinejoin="round" />
+      ) : (
+        <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" strokeLinecap="round" strokeLinejoin="round" />
+      )}
+    </svg>
+  );
+}
+
 export default function MapaPage() {
   const [parametros] = useSearchParams();
   const tramoDestacadoId = parametros.get('tramo');
@@ -61,6 +83,9 @@ export default function MapaPage() {
   const [puntosVisibles, setPuntosVisibles] = useState({});
   const [poisCargados, setPoisCargados] = useState(false);
   const [panelAbierto, setPanelAbierto] = useState(false);
+  const [panelVisible, setPanelVisible] = useState(true);
+  const [pantallaCompleta, setPantallaCompleta] = useState(false);
+  const contenedorMapaRef = useRef(null);
 
   const [herramienta, setHerramienta] = useState('');
   const [dibujo, setDibujo] = useState([]);
@@ -140,6 +165,32 @@ export default function MapaPage() {
     const temporizador = window.setTimeout(() => setMensaje(''), MENSAJE_DURACION_MS);
     return () => window.clearTimeout(temporizador);
   }, [mensaje]);
+
+  // Mantiene el estado del botón sincronizado con la pantalla completa del navegador
+  // (por ejemplo, cuando se sale con Escape o F11).
+  useEffect(() => {
+    const actualizarEstado = () => {
+      setPantallaCompleta(document.fullscreenElement === contenedorMapaRef.current);
+    };
+
+    document.addEventListener('fullscreenchange', actualizarEstado);
+    return () => document.removeEventListener('fullscreenchange', actualizarEstado);
+  }, []);
+
+  const alternarPantallaCompleta = async () => {
+    const contenedor = contenedorMapaRef.current;
+    if (!contenedor) return;
+
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else if (contenedor.requestFullscreen) {
+        await contenedor.requestFullscreen();
+      }
+    } catch {
+      setMensaje('No se pudo activar la pantalla completa.');
+    }
+  };
 
   useEffect(() => {
     if (!esEditor) {
@@ -480,7 +531,10 @@ export default function MapaPage() {
           </button>
           <button
             type="button"
-            onClick={() => setPanelAbierto(true)}
+            onClick={() => {
+              setPanelVisible(true);
+              setPanelAbierto(true);
+            }}
             aria-expanded={panelAbierto}
             aria-controls="panel-filtros"
             className="boton-suave lg:hidden"
@@ -495,6 +549,17 @@ export default function MapaPage() {
               </span>
             ) : null}
           </button>
+          <button
+            type="button"
+            onClick={() => setPanelVisible((visible) => !visible)}
+            aria-expanded={panelVisible}
+            aria-controls="panel-filtros"
+            title={panelVisible ? 'Ocultar el panel de filtros' : 'Mostrar el panel de filtros'}
+            className="boton-suave hidden lg:inline-flex"
+          >
+            <IconoPanel oculto={!panelVisible} />
+            {panelVisible ? 'Ocultar filtros' : 'Mostrar filtros'}
+          </button>
           {esEditor ? (
             <button type="button" onClick={abrirNuevoCamino} className="boton-primario w-full sm:w-auto">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4" aria-hidden="true">
@@ -507,7 +572,15 @@ export default function MapaPage() {
       </header>
 
       <div className="relative min-h-0 flex-1 px-4 pb-4 sm:px-6 lg:px-8 lg:pb-6">
-        <div className="relative h-full min-h-[26rem] overflow-hidden rounded-xl border border-gray-200 bg-[#e8f1ea] shadow-sm dark:border-slate-800 dark:bg-slate-950">
+        <div
+          ref={contenedorMapaRef}
+          className={[
+            'relative h-full min-h-[26rem] overflow-hidden bg-[#e8f1ea] dark:bg-slate-950',
+            pantallaCompleta
+              ? 'rounded-none border-0 shadow-none'
+              : 'rounded-xl border border-gray-200 shadow-sm dark:border-slate-800',
+          ].join(' ')}
+        >
           <Mapa
             tramos={tramosVisibles}
             puntos={puntos}
@@ -522,6 +595,17 @@ export default function MapaPage() {
             onEditarPunto={esEditor ? editarPunto : undefined}
             onEliminarPunto={esEditor ? borrarPunto : undefined}
           />
+
+          <button
+            type="button"
+            onClick={alternarPantallaCompleta}
+            title={pantallaCompleta ? 'Salir de pantalla completa' : 'Ver el mapa en pantalla completa'}
+            aria-label={pantallaCompleta ? 'Salir de pantalla completa' : 'Ver el mapa en pantalla completa'}
+            aria-pressed={pantallaCompleta}
+            className="tarjeta absolute right-3 top-3 z-[1045] inline-flex h-9 w-9 items-center justify-center text-stone-600 transition hover:bg-stone-50 active:bg-stone-100 sm:right-4 dark:text-stone-300 dark:hover:bg-slate-800"
+          >
+            <IconoPantallaCompleta salir={pantallaCompleta} />
+          </button>
 
           {!cargando && !error ? (
             <>
@@ -566,26 +650,36 @@ export default function MapaPage() {
             />
           ) : null}
 
-          <PanelFiltros
-            filtros={filtros}
-            onCambiar={cambiarFiltro}
-            departamentos={departamentos}
-            totalTramos={tramos.length}
-            tramosVisibles={tramosVisibles.length}
-            categorias={categorias}
-            puntosVisibles={puntosVisibles}
-            conteosPoi={conteosPoi}
-            algunPuntoVisible={algunPuntoVisible}
-            onAlternarPunto={alternarPunto}
-            onAlternarTodosPuntos={alternarTodosPuntos}
-            onAdministrarCategorias={esEditor ? () => setModalCategorias(true) : undefined}
-            abierto={panelAbierto}
-            onCerrar={() => setPanelAbierto(false)}
-            onLimpiar={limpiarFiltros}
-            cargandoPuntos={cargandoPuntos}
-          />
+          {panelVisible ? (
+            <PanelFiltros
+              filtros={filtros}
+              onCambiar={cambiarFiltro}
+              departamentos={departamentos}
+              totalTramos={tramos.length}
+              tramosVisibles={tramosVisibles.length}
+              categorias={categorias}
+              puntosVisibles={puntosVisibles}
+              conteosPoi={conteosPoi}
+              algunPuntoVisible={algunPuntoVisible}
+              onAlternarPunto={alternarPunto}
+              onAlternarTodosPuntos={alternarTodosPuntos}
+              onAdministrarCategorias={esEditor ? () => setModalCategorias(true) : undefined}
+              abierto={panelAbierto}
+              onCerrar={() => setPanelAbierto(false)}
+              onOcultarPanel={() => {
+                setPanelVisible(false);
+                setPanelAbierto(false);
+              }}
+              onLimpiar={limpiarFiltros}
+              cargandoPuntos={cargandoPuntos}
+            />
+          ) : null}
 
-          <Leyenda colorearPor={filtros.colorearPor} />
+          <Leyenda
+            colorearPor={filtros.colorearPor}
+            desplazada={panelVisible}
+            onMostrarFiltros={panelVisible ? undefined : () => setPanelVisible(true)}
+          />
 
           {!algunPuntoVisible && (categorias.length > 0 || cargandoPuntos) ? (
             <div className="pointer-events-none absolute inset-x-0 bottom-6 z-[1040] flex justify-center px-4">

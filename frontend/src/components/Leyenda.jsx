@@ -40,15 +40,33 @@ function MuestraLinea({ color, dashArray }) {
   );
 }
 
-export default function Leyenda({ colorearPor }) {
+export default function Leyenda({ colorearPor, desplazada = true, onMostrarFiltros }) {
+  const posicionIzquierda = desplazada ? 'lg:left-[23rem]' : 'lg:left-3';
   const { categorias } = useCategorias();
   const [abierto, setAbierto] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
   );
 
+  const botonFiltros = onMostrarFiltros ? (
+    <button
+      type="button"
+      onClick={onMostrarFiltros}
+      className="tarjeta inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold text-stone-700 transition hover:bg-white dark:text-stone-200 dark:hover:bg-slate-800"
+      title="Mostrar el panel de filtros"
+      aria-controls="panel-filtros"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4" aria-hidden="true">
+        <path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round" />
+      </svg>
+      Mostrar filtros
+    </button>
+  ) : null;
+
   if (!abierto) {
     return (
-      <div className="absolute bottom-6 left-3 z-[1040] lg:left-[23rem]">
+      <div
+        className={`absolute bottom-6 left-3 z-[1040] flex flex-col-reverse items-start gap-2 sm:flex-row sm:items-center ${posicionIzquierda}`}
+      >
         <button
           type="button"
           onClick={() => setAbierto(true)}
@@ -60,13 +78,16 @@ export default function Leyenda({ colorearPor }) {
           </svg>
           Leyenda
         </button>
+        {botonFiltros}
       </div>
     );
   }
 
   return (
-    <div className="absolute bottom-6 left-3 z-[1040] w-[15.5rem] lg:left-[23rem]">
-      <div className="tarjeta animate-aparecer p-3">
+    <div
+      className={`absolute bottom-6 left-3 z-[1040] flex flex-col-reverse items-start gap-2 sm:flex-row sm:items-end ${posicionIzquierda}`}
+    >
+      <div className="tarjeta animate-aparecer w-[15.5rem] p-3">
         <div className="flex items-start justify-between gap-2">
           <div>
             <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-stone-700 dark:text-stone-200">
@@ -139,6 +160,7 @@ export default function Leyenda({ colorearPor }) {
           </ul>
         </div>
       </div>
+      {botonFiltros}
     </div>
   );
 }
