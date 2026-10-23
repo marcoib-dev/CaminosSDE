@@ -306,6 +306,8 @@ Se recompila el frontend y se recrean solo los contenedores cuya imagen cambió;
 
 El frontend se publica **solo en loopback** (`127.0.0.1:${HTTP_PORT}`). La LAN no puede llegar a Nginx: el único camino es cloudflared. Hay dos formas de correr el túnel:
 
+> **Antes de desplegar esta versión**, configurá el túnel o una VPN. Si el sitio se accedía por la IP de la LAN, al aplicar el cambio deja de ser accesible desde otras máquinas hasta que cloudflared esté funcionando.
+
 1. **cloudflared instalado en el host (recomendado si ya lo tenés).** El ingress del túnel debe apuntar a `http://localhost:${HTTP_PORT}` (por defecto `http://localhost:80`). El servicio se administra con systemd, fuera de Compose.
 2. **cloudflared como servicio de Compose.** Completá `CLOUDFLARE_TUNNEL_TOKEN` en `.env.produccion`, configurá el ingress del túnel hacia `http://frontend:8080` y arrancá con el perfil `tunnel`:
 
