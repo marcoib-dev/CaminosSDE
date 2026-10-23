@@ -15,6 +15,7 @@ RUN apt-get update \
 COPY package*.json ./
 RUN npm ci
 
+COPY prisma.config.js ./
 COPY prisma ./prisma
 RUN npx prisma generate
 
@@ -31,6 +32,7 @@ WORKDIR /app
 
 COPY --from=build /app/node_modules ./node_modules
 COPY package*.json ./
+COPY prisma.config.js ./
 COPY prisma ./prisma
 COPY src ./src
 

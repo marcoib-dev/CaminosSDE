@@ -16,11 +16,9 @@ import 'dotenv/config';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { DOMParser } from '@xmldom/xmldom';
-import { PrismaClient } from '@prisma/client';
 import { kml as convertirKml } from '@tmcw/togeojson';
+import { prisma } from '../src/config/prisma.js';
 import { normalizarClave } from '../src/services/importacion/mapeo.js';
-
-const prisma = new PrismaClient();
 
 const CATEGORIAS_VALIDAS = new Set(['HOSPITAL', 'ESCUELA', 'UPA']);
 const EXTENSIONES = ['.geojson', '.json', '.kml'];

@@ -36,10 +36,14 @@ export function manejarErrores(error, req, res, next) {
     }
 
     if (error.code === 'P2002') {
-      const campos = Array.isArray(error.meta?.target)
-        ? error.meta.target.join(', ')
-        : String(error.meta?.target ?? '');
-      const mensaje = campos.includes('email')
+      // Prisma 7 con driver adapter ya no expone meta.target: el nombre del
+      // índice viaja dentro de driverAdapterError.cause.constraint.
+      const objetivo =
+        error.meta?.target ??
+        error.meta?.driverAdapterError?.cause?.constraint?.fields ??
+        error.meta?.driverAdapterError?.cause?.constraint?.index;
+      const campos = Array.isArray(objetivo) ? objetivo.join(', ') : String(objetivo ?? '');
+      const mensaje = campos.toLowerCase().includes('email')
         ? 'Ya existe un usuario con ese email.'
         : 'Ya existe un registro con esos datos.';
       return res.status(409).json({ mensaje });
