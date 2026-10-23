@@ -388,7 +388,7 @@ $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit
 Register-ScheduledTask -TaskName 'CaminosSDE - Backup diario' -Action $action -Trigger $trigger -Settings $settings -Force
 ```
 
-Parámetros: `-Servidor`, `-Usuario`, `-Destino` (por defecto `D:\Proyectos de python\BACKUPS\CaminosRurales`) y `-RetencionDias` (60). Deja un `backup.log` en el destino, valida el gzip antes de aceptarlo y descarta el archivo si llegó truncado. La tarea corre solo con la PC encendida; `-StartWhenAvailable` la ejecuta al iniciar si se perdió el horario. El servidor conserva además su propia copia con retención de 30 días.
+Parámetros: `-Servidor` (por defecto `ServerDebian.local`, que se resuelve por mDNS y sobrevive a un cambio de IP del servidor), `-Usuario`, `-Destino` (por defecto `D:\Proyectos de python\BACKUPS\CaminosRurales`) y `-RetencionDias` (60). Si la red bloquea mDNS, pasá la IP con `-Servidor 192.168.1.36`. Deja un `backup.log` en el destino, valida el gzip antes de aceptarlo y descarta el archivo si llegó truncado. La tarea corre solo con la PC encendida; `-StartWhenAvailable` la ejecuta al iniciar si se perdió el horario. El servidor conserva además su propia copia con retención de 30 días.
 
 El script debe guardarse en **UTF-8 con BOM**: PowerShell 5.1 lee los `.ps1` sin BOM como ANSI y rompe los acentos.
 

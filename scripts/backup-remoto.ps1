@@ -7,14 +7,14 @@
 #   powershell -NoProfile -ExecutionPolicy Bypass -File scripts\backup-remoto.ps1
 #
 # Parámetros opcionales:
-#   -Servidor        IP o host del servidor (por defecto 192.168.1.36)
+#   -Servidor        Nombre mDNS o IP del servidor (por defecto ServerDebian.local)
 #   -Usuario         Usuario SSH (por defecto marco)
 #   -Destino         Carpeta local de destino (por defecto D:\Proyectos de python\BACKUPS\CaminosRurales)
 #   -RetencionDias   Días a conservar en esta PC (por defecto 60)
 
 [CmdletBinding()]
 param(
-    [string]$Servidor = '192.168.1.36',
+    [string]$Servidor = 'ServerDebian.local',
     [string]$Usuario = 'marco',
     [string]$Destino = 'D:\Proyectos de python\BACKUPS\CaminosRurales',
     [int]$RetencionDias = 60
