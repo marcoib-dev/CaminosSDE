@@ -226,7 +226,7 @@ Frontend:
 
 | Servicio | Imagen / build | Función |
 |---|---|---|
-| `frontend` | `frontend/Dockerfile` (Node 22 + Nginx) | Compila React y sirve `dist/`. Publica `HTTP_PORT` (80 por defecto) y redirige `/api/` al backend. |
+| `frontend` | `frontend/Dockerfile` (Node 22 + Nginx unprivileged) | Compila React y sirve `dist/`. Publica `HTTP_PORT` (80 por defecto) **solo en `127.0.0.1`** y redirige `/api/` al backend. |
 | `backend` | `backend/Dockerfile` (Node 22) | API Express. Al arrancar aplica las migraciones de Prisma y luego inicia el servidor. No publica puertos: solo es accesible desde la red interna. |
 | `postgres` | `postgres:16-alpine` | Base de datos con el volumen `postgres_data`. No publica puertos. |
 
@@ -237,7 +237,7 @@ El frontend y la API quedan bajo el **mismo origen** (`https://tu-dominio.com/ap
 - Docker Engine 24 o superior con Docker Compose v2 (`docker compose version`).
 - **2 GB de RAM** como mínimo y 4 GB recomendados. La importación de `.gpkg` trabaja en memoria y el build del frontend consume cerca de 1 GB.
 - **20 GB de disco**. Las fotos no se guardan en el servidor: van a Cloudinary.
-- Puertos 80 y 443 abiertos si el servidor publica el sitio directamente.
+- No hace falta abrir 80 ni 443: con Cloudflare Tunnel el tráfico sale del servidor hacia Cloudflare. Si publicás el sitio directamente, abrí esos puertos.
 - No hace falta instalar Node.js ni PostgreSQL en el host: todo corre en contenedores.
 
 ### 1. Preparar las variables
@@ -256,8 +256,9 @@ Editar `.env.produccion`:
 | `ADMIN_NOMBRE`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Credenciales del administrador que crea el seed. |
 | `SEED_SIN_DEMO` | `true` para crear solo el ADMIN y las categorías base, sin caminos ni puntos de ejemplo. |
 | `CLOUDINARY_*` | Sin estos valores la API responde `503` al firmar subidas de fotos. |
-| `HTTP_PORT` | Puerto del host publicado por Nginx. 80 por defecto. |
+| `HTTP_PORT` | Puerto del host donde Nginx escucha, **solo en loopback**. 80 por defecto; el contenedor escucha en 8080. |
 | `VITE_API_URL` | Dejar en `/api`: se compila dentro del frontend y Nginx lo redirige al backend. |
+| `CLOUDFLARE_TUNNEL_TOKEN` | Solo si cloudflared corre como servicio de Compose (perfil `tunnel`). Si corre en el host, dejàlo vacío. |
 
 `.env.produccion` está ignorado por git y no debe commitearse.
 
@@ -276,7 +277,7 @@ docker compose --env-file .env.produccion -f docker-compose.prod.yaml ps
 docker compose --env-file .env.produccion -f docker-compose.prod.yaml logs -f backend
 ```
 
-`postgres` y `backend` deben figurar como `healthy`. Luego abrir `http://<ip-del-servidor>` (o `http://<ip>:<HTTP_PORT>`) y comprobar la API:
+`postgres` y `backend` deben figurar como `healthy`. Como Nginx solo escucha en loopback, probá desde el servidor con `http://localhost:<HTTP_PORT>` o entrá por el dominio del túnel. Para comprobar la API:
 
 ```bash
 curl http://localhost/api/health
@@ -301,37 +302,37 @@ docker compose --env-file .env.produccion -f docker-compose.prod.yaml up -d --bu
 
 Se recompila el frontend y se recrean solo los contenedores cuya imagen cambió; las migraciones nuevas se aplican al reiniciar el backend. Recordá que `VITE_API_URL` se congela en el build: si la cambiás, hay que reconstruir el frontend.
 
-### HTTPS
+### Acceso remoto con Cloudflare Tunnel
 
-El Nginx del contenedor escucha HTTP. Hay dos opciones:
+El frontend se publica **solo en loopback** (`127.0.0.1:${HTTP_PORT}`). La LAN no puede llegar a Nginx: el único camino es cloudflared. Hay dos formas de correr el túnel:
 
-1. **Proxy con TLS delante (recomendado).** Instalá Caddy o Nginx con Certbot en el host, poné `HTTP_PORT=8080` en `.env.produccion` y apuntá el proxy a `127.0.0.1:8080`. Ejemplo de `Caddyfile`:
+1. **cloudflared instalado en el host (recomendado si ya lo tenés).** El ingress del túnel debe apuntar a `http://localhost:${HTTP_PORT}` (por defecto `http://localhost:80`). El servicio se administra con systemd, fuera de Compose.
+2. **cloudflared como servicio de Compose.** Completá `CLOUDFLARE_TUNNEL_TOKEN` en `.env.produccion`, configurá el ingress del túnel hacia `http://frontend:8080` y arrancá con el perfil `tunnel`:
 
-   ```caddy
-   caminos.example.gob.ar {
-       reverse_proxy 127.0.0.1:8080
-   }
+   ```bash
+   docker compose --env-file .env.produccion -f docker-compose.prod.yaml --profile tunnel up -d
    ```
 
-2. **Certificados en el host con Certbot** publicando el puerto 80 del contenedor y montando los certificados en un Nginx del host.
+En ambos casos Cloudflare termina TLS y el tramo cloudflared → Nginx viaja cifrado por el túnel. `FRONTEND_URL` debe ser el origen público exacto con `https://` (por ejemplo `https://caminos.example.gob.ar`); si no coincide, CORS rechaza el login y las escrituras.
 
-En ambos casos `FRONTEND_URL` debe ser la URL pública con `https://`.
+Nginx toma la IP real del cliente de `CF-Connecting-IP` y la envía al backend en `X-Forwarded-For` (sobrescribiéndolo, no concatenándolo). El backend confía en un solo proxy, así que los rate limits y la auditoría usan la IP del cliente y no la del túnel. No agregues HSTS hasta que el dominio definitivo funcione por HTTPS: los túneles rápidos (`trycloudflare.com`) cambian de nombre.
 
 ### Copias de seguridad
 
-```bash
-docker compose --env-file .env.produccion -f docker-compose.prod.yaml exec -T postgres \
-  pg_dump -U caminos -d caminos_rurales > respaldo-$(date +%F).sql
-```
-
-Para restaurar (sobre una base vacía):
+El repo incluye `scripts/backup-postgres.sh` (dump comprimido, verificación de gzip, retención y copia opcional con rclone) y `scripts/restaurar-postgres.sh`.
 
 ```bash
-cat respaldo-2026-01-01.sql | docker compose --env-file .env.produccion -f docker-compose.prod.yaml exec -T postgres \
-  psql -U caminos -d caminos_rurales
+# Backup manual
+scripts/backup-postgres.sh
+
+# Cron diario a las 03:15
+15 3 * * * $HOME/CaminosSDE/scripts/backup-postgres.sh >> $HOME/backups/backup.log 2>&1
+
+# Restauración (reemplaza todos los datos)
+scripts/restaurar-postgres.sh $HOME/backups/caminos/caminos-2026-10-23_031500.sql.gz --confirmar
 ```
 
-Si cambiaste `POSTGRES_USER` o `POSTGRES_DB`, ajustá el usuario y el nombre de la base en los comandos.
+Variables opcionales: `BACKUP_DIR` (por defecto `~/backups/caminos`), `RETENCION_DIAS` (30), `ENV_FILE`, `RCLONE_REMOTE`. Probá una restauración al menos una vez por trimestre: un backup que nunca se restauró no sirve.
 
 ### Comandos útiles
 
@@ -342,6 +343,8 @@ Si cambiaste `POSTGRES_USER` o `POSTGRES_DB`, ajustá el usuario y el nombre de 
 | `docker compose --env-file .env.produccion -f docker-compose.prod.yaml down` | Detiene el stack y conserva la base. |
 | `docker compose --env-file .env.produccion -f docker-compose.prod.yaml down -v` | Detiene el stack y **borra la base de datos**. |
 | `docker compose --env-file .env.produccion -f docker-compose.prod.yaml exec postgres psql -U caminos -d caminos_rurales` | Abre la consola SQL. |
+| `docker compose --env-file .env.produccion -f docker-compose.prod.yaml --profile tunnel up -d` | Levanta también cloudflared como contenedor. |
+| `scripts/backup-postgres.sh` | Genera un backup comprimido y aplica la retención. |
 
 ### Notas
 
@@ -349,8 +352,70 @@ Si cambiaste `POSTGRES_USER` o `POSTGRES_DB`, ajustá el usuario y el nombre de 
 - **Tamaño de las subidas**: Nginx acepta hasta 30 MB (`frontend/nginx.conf`) para cubrir el `.gpkg` de 25 MB y el JSON de confirmación de 10 MB. Si cambiás esos límites en el backend, actualizá también Nginx.
 - **Importación pesada**: es síncrona y consume RAM. En un servidor de 2 GB, evitá importar varios archivos grandes a la vez.
 - **Sin volumen para fotos**: las imágenes se guardan en Cloudinary; en la base solo queda la URL.
-- **Puertos internos**: `postgres` y `backend` no se publican al host, solo Nginx.
+- **Puertos internos**: `postgres` y `backend` no se publican al host. El frontend se publica solo en `127.0.0.1:${HTTP_PORT}`; el acceso externo pasa por cloudflared.
+- **Hardening de contenedores**: backend y frontend con `no-new-privileges`, `cap_drop: ALL` y `read_only`. El frontend usa la imagen unprivileged de Nginx (UID 101, puerto 8080). PostgreSQL conserva las capabilities de inicialización del volumen, pero con `no-new-privileges`.
 - **Cabeceras de seguridad**: el backend envía las cabeceras de Helmet (sin CSP ni HSTS). Nginx agrega `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` y la CSP, que solo permite el propio origen, Google Fonts, los tiles de OpenStreetMap y Cloudinary. El script de tema es externo (`public/tema.js`) para no necesitar `'unsafe-inline'` en `script-src`.
+
+## Endurecimiento del servidor
+
+Pasos manuales en el host Debian. No los ejecuta la aplicación y conviene probar cada uno desde otra terminal antes de cerrar la sesión actual.
+
+### SSH
+
+```bash
+# En tu PC: generar clave y copiarla al servidor
+ssh-keygen -t ed25519 -C "usuario@homelab"
+ssh-copy-id usuario@servidor
+
+# Probar la clave ANTES de desactivar la contraseña
+ssh -o PreferredAuthentications=publickey usuario@servidor 'echo ok'
+```
+
+En `/etc/ssh/sshd_config.d/99-hardening.conf`:
+
+```
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin no
+MaxAuthTries 4
+```
+
+```bash
+sudo systemctl reload ssh
+```
+
+Rotá también la contraseña de SSH y la de `sudo` si son la misma.
+
+### fail2ban y actualizaciones automáticas
+
+```bash
+sudo apt install fail2ban unattended-upgrades
+sudo systemctl enable --now fail2ban
+sudo dpkg-reconfigure --priority=low unattended-upgrades
+```
+
+### Firewall
+
+```bash
+sudo apt install ufw
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow from <red-lan>/24 to any port 22 proto tcp
+sudo ufw enable
+```
+
+UFW no filtra los puertos publicados por Docker. El frontend ya queda solo en loopback; para Portainer, Jellyfin y otros contenedores usá la cadena `DOCKER-USER`:
+
+```bash
+sudo iptables -I DOCKER-USER -i <interfaz> ! -s <red-lan>/24 -j DROP
+```
+
+Revisá la interfaz con `ip route` y probá el acceso remoto antes de dejarlo permanente.
+
+### Netdata y paneles
+
+- Netdata: `bind to = 127.0.0.1` en `/etc/netdata/netdata.conf` y `sudo systemctl restart netdata`, o accedé por túnel SSH (`ssh -L 19999:127.0.0.1:19999 usuario@servidor`).
+- Portainer y Jellyfin: solo LAN o VPN, con autenticación activa.
 
 ## Autenticación
 

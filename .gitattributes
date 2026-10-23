@@ -1,0 +1,3 @@
+# Los scripts de mantenimiento se ejecutan en Linux: forzar LF también en
+# checkouts de Windows para que el shebang y las rutas funcionen.
+*.sh text eol=lf

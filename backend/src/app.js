@@ -10,7 +10,8 @@ import { ApiError } from './utils/ApiError.js';
 const app = express();
 
 if (env.nodeEnv === 'production') {
-  // Render (y otros proxies) envían X-Forwarded-For.
+  // Un solo proxy delante (Nginx). Nginx sobrescribe X-Forwarded-For con la
+  // IP real del cliente, tomada de CF-Connecting-IP cuando llega por el túnel.
   app.set('trust proxy', 1);
 }
 
