@@ -256,7 +256,8 @@ Editar `.env.produccion`:
 | `ADMIN_NOMBRE`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Credenciales del administrador que crea el seed. |
 | `SEED_SIN_DEMO` | `true` para crear solo el ADMIN y las categorías base, sin caminos ni puntos de ejemplo. |
 | `CLOUDINARY_*` | Sin estos valores la API responde `503` al firmar subidas de fotos. |
-| `HTTP_PORT` | Puerto del host donde Nginx escucha, **solo en loopback**. 80 por defecto; el contenedor escucha en 8080. |
+| `BIND_HOST` | Interfaz donde Nginx escucha. `127.0.0.1` por defecto (túnel/proxy en el mismo host); para un proxy externo, la IP privada del servidor o `0.0.0.0` con firewall. |
+| `HTTP_PORT` | Puerto del host donde Nginx escucha. 80 por defecto; el contenedor escucha en 8080. |
 | `VITE_API_URL` | Dejar en `/api`: se compila dentro del frontend y Nginx lo redirige al backend. |
 | `CLOUDFLARE_TUNNEL_TOKEN` | Solo si cloudflared corre como servicio de Compose (perfil `tunnel`). Si corre en el host, dejàlo vacío. |
 
@@ -304,7 +305,7 @@ Se recompila el frontend y se recrean solo los contenedores cuya imagen cambió;
 
 ### Acceso remoto con Cloudflare Tunnel
 
-El frontend se publica **solo en loopback** (`127.0.0.1:${HTTP_PORT}`). La LAN no puede llegar a Nginx: el único camino es cloudflared. Hay dos formas de correr el túnel:
+Con la configuración por defecto (`BIND_HOST=127.0.0.1`), el frontend se publica **solo en loopback** y la LAN no puede llegar a Nginx: el único camino es cloudflared. Hay dos formas de correr el túnel:
 
 > **Antes de desplegar esta versión**, configurá el túnel o una VPN. Si el sitio se accedía por la IP de la LAN, al aplicar el cambio deja de ser accesible desde otras máquinas hasta que cloudflared esté funcionando.
 
@@ -317,7 +318,33 @@ El frontend se publica **solo en loopback** (`127.0.0.1:${HTTP_PORT}`). La LAN n
 
 En ambos casos Cloudflare termina TLS y el tramo cloudflared → Nginx viaja cifrado por el túnel. `FRONTEND_URL` debe ser el origen público exacto con `https://` (por ejemplo `https://caminos.example.gob.ar`); si no coincide, CORS rechaza el login y las escrituras.
 
-Nginx toma la IP real del cliente de `CF-Connecting-IP` y la envía al backend en `X-Forwarded-For` (sobrescribiéndolo, no concatenándolo). El backend confía en un solo proxy, así que los rate limits y la auditoría usan la IP del cliente y no la del túnel. No agregues HSTS hasta que el dominio definitivo funcione por HTTPS: los túneles rápidos (`trycloudflare.com`) cambian de nombre.
+Nginx toma la IP real del cliente de `CF-Connecting-IP` y la envía al backend en `X-Forwarded-For` (sobrescribiéndolo, no concatenándolo). Si no hay `CF-Connecting-IP`, usa el último IP de `X-Forwarded-For`; si tampoco hay cabecera, usa la IP del socket. El backend confía en un solo proxy, así que los rate limits y la auditoría usan la IP del cliente y no la del túnel. No agregues HSTS hasta que el dominio definitivo funcione por HTTPS: los túneles rápidos (`trycloudflare.com`) cambian de nombre.
+
+### Proxy propio o servidor del instituto
+
+El contenedor sirve HTTP y no depende de Cloudflare. Para publicarlo con el proxy/TLS del instituto:
+
+1. Ajustá `BIND_HOST`:
+   - `127.0.0.1` si el proxy corre en el mismo host (Caddy, Nginx o Traefik).
+   - La IP privada del servidor o `0.0.0.0` si el proxy está en otra máquina o contenedor. Restringí el puerto por firewall para que solo el proxy llegue.
+2. Si el proxy corre en el host, usá `HTTP_PORT=8080` (u otro puerto libre) para no chocar con el 80/443 que necesita el proxy para TLS.
+3. Poné `FRONTEND_URL` con el origen público exacto, por ejemplo `https://caminos.instituto.edu.ar`.
+4. Asegurate de que el proxy envíe `X-Forwarded-For` con la IP del cliente. Nginx usa el último IP de la cadena; si hay varios proxies, el inmediato debe sobrescribirla con `$remote_addr` para no arrastrar valores del cliente.
+5. No levantes el perfil `tunnel` ni configures `CLOUDFLARE_TUNNEL_TOKEN`.
+
+Ejemplo con Caddy en el mismo host:
+
+```caddy
+caminos.instituto.edu.ar {
+    reverse_proxy 127.0.0.1:8080
+}
+```
+
+La app se sirve en la **raíz del dominio**. Si el instituto la publica en un subpath (`https://.../caminos/`), hay que agregar soporte de base path en Vite, React Router y Nginx; conviene pedir un subdominio.
+
+El mapa usa tiles de OpenStreetMap, las fuentes vienen de Google Fonts y las fotos van a Cloudinary. Si el servidor del instituto no tiene salida a internet, hay que self-hostear tiles y fuentes o usar un proxy, y definir otro almacenamiento para las fotos. El build de Docker también necesita npm, Docker Hub y los repositorios de Debian, salvo que lleves las imágenes ya construidas.
+
+Si el instituto provee una base PostgreSQL administrada, se cambia `DATABASE_URL` en el compose o en un archivo de override; el resto del despliegue no cambia.
 
 ### Copias de seguridad
 
@@ -356,7 +383,7 @@ El backup cubre solo PostgreSQL. Guardá aparte una copia de `.env.produccion` (
 - **Tamaño de las subidas**: Nginx acepta hasta 30 MB (`frontend/nginx.conf`) para cubrir el `.gpkg` de 25 MB y el JSON de confirmación de 10 MB. Si cambiás esos límites en el backend, actualizá también Nginx.
 - **Importación pesada**: es síncrona y consume RAM. En un servidor de 2 GB, evitá importar varios archivos grandes a la vez.
 - **Sin volumen para fotos**: las imágenes se guardan en Cloudinary; en la base solo queda la URL.
-- **Puertos internos**: `postgres` y `backend` no se publican al host. El frontend se publica solo en `127.0.0.1:${HTTP_PORT}`; el acceso externo pasa por cloudflared.
+- **Puertos internos**: `postgres` y `backend` no se publican al host. El frontend se publica en `BIND_HOST:${HTTP_PORT}` (`127.0.0.1` por defecto); el acceso externo pasa por cloudflared o por el proxy institucional.
 - **Hardening de contenedores**: backend y frontend con `no-new-privileges`, `cap_drop: ALL` y `read_only`. El frontend usa la imagen unprivileged de Nginx (UID 101, puerto 8080). PostgreSQL conserva las capabilities de inicialización del volumen, pero con `no-new-privileges`.
 - **Cabeceras de seguridad**: el backend envía las cabeceras de Helmet (sin CSP ni HSTS). Nginx agrega `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` y la CSP, que solo permite el propio origen, Google Fonts, los tiles de OpenStreetMap y Cloudinary. El script de tema es externo (`public/tema.js`) para no necesitar `'unsafe-inline'` en `script-src`.
 

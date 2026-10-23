@@ -78,11 +78,11 @@ services:
       args:
         VITE_API_URL: ${VITE_API_URL:-/api}
     restart: unless-stopped
-    # Solo loopback: cloudflared (host) llega por localhost y la LAN no puede
-    # esquivar el túnel. Si cloudflared corre como servicio de Compose, entra
-    # por la red interna a frontend:8080 y este puerto es solo para depurar.
+    # BIND_HOST=127.0.0.1 si cloudflared o el proxy corre en este host.
+    # Para un proxy en otro host/contenedor, usá la IP privada del servidor
+    # (o 0.0.0.0) y restringí el puerto por firewall.
     ports:
-      - "127.0.0.1:${HTTP_PORT:-80}:8080"
+      - "${BIND_HOST:-127.0.0.1}:${HTTP_PORT:-80}:8080"
     depends_on:
       - backend
     security_opt:
