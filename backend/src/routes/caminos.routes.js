@@ -4,6 +4,7 @@ import {
   crear,
   eliminar,
   listar,
+  listarMapa,
   obtener,
 } from '../controllers/caminos.controller.js';
 import {
@@ -25,6 +26,7 @@ const router = Router();
 const soloEditores = [autenticar, autorizar('EDITOR', 'ADMIN')];
 
 router.get('/', validar({ query: listarCaminosQuerySchema }), listar);
+router.get('/mapa', listarMapa);
 router.get('/:id', validar({ params: idParamSchema }), obtener);
 
 router.post('/', ...soloEditores, validar({ body: crearCaminoSchema }), crear);

@@ -3,6 +3,7 @@ import { registrarAuditoria } from '../services/auditoria.service.js';
 import { invalidarPrioridades } from '../services/cachePrioridad.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { opcionesPrisma, respuestaPaginada } from '../utils/paginacion.js';
 
 async function verificarCategoria(clave) {
   const categoria = await prisma.categoriaPunto.findUnique({
@@ -17,13 +18,18 @@ async function verificarCategoria(clave) {
 
 export const listar = asyncHandler(async (req, res) => {
   const { categoria } = req.consulta;
+  const where = categoria ? { categoria } : {};
 
-  const puntos = await prisma.puntoInteres.findMany({
-    where: categoria ? { categoria } : {},
-    orderBy: { nombre: 'asc' },
-  });
+  const [puntos, total] = await prisma.$transaction([
+    prisma.puntoInteres.findMany({
+      where,
+      orderBy: { nombre: 'asc' },
+      ...opcionesPrisma(req.consulta),
+    }),
+    prisma.puntoInteres.count({ where }),
+  ]);
 
-  res.json({ datos: puntos });
+  res.json(respuestaPaginada(puntos, req.consulta, total));
 });
 
 export const crear = asyncHandler(async (req, res) => {

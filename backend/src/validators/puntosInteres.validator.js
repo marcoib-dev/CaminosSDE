@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { categoriaPuntoSchema } from './comun.js';
+import { categoriaPuntoSchema, limiteSchema, paginaSchema } from './comun.js';
 
 const nombreSchema = z
   .string({ error: 'El nombre es obligatorio.' })
@@ -28,4 +28,6 @@ export const actualizarPuntoInteresSchema = crearPuntoInteresSchema
 
 export const listarPuntosQuerySchema = z.object({
   categoria: categoriaPuntoSchema.optional(),
+  pagina: paginaSchema,
+  limite: limiteSchema,
 });

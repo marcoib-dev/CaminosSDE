@@ -3,10 +3,37 @@ import { registrarAuditoria } from '../services/auditoria.service.js';
 import { invalidarPrioridades } from '../services/cachePrioridad.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { opcionesPrisma, respuestaPaginada } from '../utils/paginacion.js';
 
 const caminoConRelaciones = {
   tramos: { orderBy: { creadoEn: 'asc' } },
   fotos: true,
+};
+
+/**
+ * Payload del mapa: solo caminos activos y sin timestamps. Conserva fotos y
+ * descripción porque el popup y el panel de edición los muestran.
+ */
+const caminoParaMapa = {
+  id: true,
+  nombre: true,
+  localidad: true,
+  departamento: true,
+  descripcion: true,
+  activo: true,
+  fotos: { select: { id: true, url: true, descripcion: true } },
+  tramos: {
+    orderBy: { creadoEn: 'asc' },
+    select: {
+      id: true,
+      caminoId: true,
+      geometria: true,
+      longitudKm: true,
+      estado: true,
+      tipo: true,
+      observaciones: true,
+    },
+  },
 };
 
 export const listar = asyncHandler(async (req, res) => {
@@ -17,9 +44,23 @@ export const listar = asyncHandler(async (req, res) => {
   if (departamento) where.departamento = { equals: departamento, mode: 'insensitive' };
   if (activo !== undefined) where.activo = activo;
 
+  const [caminos, total] = await prisma.$transaction([
+    prisma.camino.findMany({
+      where,
+      include: caminoConRelaciones,
+      orderBy: { nombre: 'asc' },
+      ...opcionesPrisma(req.consulta),
+    }),
+    prisma.camino.count({ where }),
+  ]);
+
+  res.json(respuestaPaginada(caminos, req.consulta, total));
+});
+
+export const listarMapa = asyncHandler(async (req, res) => {
   const caminos = await prisma.camino.findMany({
-    where,
-    include: caminoConRelaciones,
+    where: { activo: true },
+    select: caminoParaMapa,
     orderBy: { nombre: 'asc' },
   });
 

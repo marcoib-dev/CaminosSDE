@@ -69,3 +69,16 @@ export const emailSchema = z
 export const booleanoQuerySchema = z
   .enum(['true', 'false'], { error: 'El valor debe ser true o false.' })
   .transform((valor) => valor === 'true');
+
+export const paginaSchema = z.coerce
+  .number({ error: 'La página debe ser un número.' })
+  .int({ error: 'La página debe ser un número entero.' })
+  .min(1, { error: 'La página mínima es 1.' })
+  .default(1);
+
+export const limiteSchema = z.coerce
+  .number({ error: 'El límite debe ser un número.' })
+  .int({ error: 'El límite debe ser un número entero.' })
+  .min(1, { error: 'El límite mínimo es 1.' })
+  .max(500, { error: 'El límite máximo es 500.' })
+  .default(100);

@@ -350,6 +350,7 @@ Si cambiaste `POSTGRES_USER` o `POSTGRES_DB`, ajustá el usuario y el nombre de 
 - **Importación pesada**: es síncrona y consume RAM. En un servidor de 2 GB, evitá importar varios archivos grandes a la vez.
 - **Sin volumen para fotos**: las imágenes se guardan en Cloudinary; en la base solo queda la URL.
 - **Puertos internos**: `postgres` y `backend` no se publican al host, solo Nginx.
+- **Cabeceras de seguridad**: el backend envía las cabeceras de Helmet (sin CSP ni HSTS). Nginx agrega `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` y la CSP, que solo permite el propio origen, Google Fonts, los tiles de OpenStreetMap y Cloudinary. El script de tema es externo (`public/tema.js`) para no necesitar `'unsafe-inline'` en `script-src`.
 
 ## Autenticación
 
@@ -400,11 +401,12 @@ Los errores tienen este formato:
 | Método | Ruta | Rol | Body | Respuesta |
 |---|---|---|---|---|
 | GET | `/api/health` | Público | — | `200 { estado: "ok", fecha }` |
-| GET | `/api/caminos` | Público | — (query: `q`, `departamento`, `activo`) | `200 { datos: Camino[] }` con `tramos` y `fotos` |
+| GET | `/api/caminos` | Público | — (query: `q`, `departamento`, `activo`, `pagina`, `limite`) | `200 { datos: Camino[], paginacion }` con `tramos` y `fotos` |
+| GET | `/api/caminos/mapa` | Público | — | `200 { datos: Camino[] }` solo activos, con `tramos`, `fotos` y sin timestamps |
 | GET | `/api/caminos/:id` | Público | — | `200 { datos: Camino }` con `tramos` y `fotos` · `404` |
-| GET | `/api/tramos` | Público | — (query: `caminoId`, `estado`, `tipo`, `departamento`) | `200 { datos: Tramo[] }` con datos básicos del camino |
+| GET | `/api/tramos` | Público | — (query: `caminoId`, `estado`, `tipo`, `departamento`, `pagina`, `limite`) | `200 { datos: Tramo[], paginacion }` con datos básicos del camino |
 | GET | `/api/tramos/prioridad` | Público · máx. 20 por minuto por IP | — | `200 { datos: TramoConPrioridad[] }` ordenados de mayor a menor puntaje (cacheado 60 s) · `429` |
-| GET | `/api/puntos-interes` | Público | — (query: `categoria`) | `200 { datos: PuntoInteres[] }` |
+| GET | `/api/puntos-interes` | Público | — (query: `categoria`, `pagina`, `limite`) | `200 { datos: PuntoInteres[], paginacion }` |
 | GET | `/api/categorias-puntos` | Público | — | `200 { datos: CategoriaPunto[] }` con `totalPuntos` |
 | POST | `/api/sugerencias` | Público · máx. 5 cada 15 min por IP | `{ texto, contacto?, caminoId?, tramoId? }` | `201 { datos: { id, estado, creadoEn }, mensaje }` · `429` |
 | POST | `/api/auth/login` | Público · máx. 10 fallos por IP + email cada 15 min | `{ email, password }` | `200 { datos: { token, usuario } }` · `401` · `429` |
@@ -441,6 +443,8 @@ Toda la API tiene un límite global de 300 requests por IP cada 15 minutos (`429
 
 `DELETE /api/caminos/:id` es una baja definitiva (elimina en cascada sus tramos e historial). Para conservar los datos, usar `PATCH /api/caminos/:id` con `{ "activo": false }`.
 
+Los listados de caminos, tramos y puntos de interés están paginados. `pagina` arranca en 1 y `limite` admite de 1 a 500 registros (por defecto 100). La respuesta incluye `paginacion: { pagina, limite, total, totalPaginas }`. `GET /api/caminos/mapa` no se pagina: devuelve todos los caminos activos con sus tramos para dibujar el mapa.
+
 ### Parámetros de consulta
 
 | Endpoint | Parámetro | Descripción |
@@ -453,6 +457,8 @@ Toda la API tiene un límite global de 300 requests por IP cada 15 minutos (`429
 | | `tipo` | Tipo de superficie. |
 | | `departamento` | Departamento del camino. |
 | `GET /api/puntos-interes` | `categoria` | Clave de la categoría: `HOSPITAL`, `ESCUELA`, `UPA` o una creada por un editor. |
+| `GET /api/caminos`, `GET /api/tramos`, `GET /api/puntos-interes` | `pagina` | Número de página, desde 1 (por defecto 1). |
+| | `limite` | Registros por página, de 1 a 500 (por defecto 100). |
 | `GET /api/sugerencias` | `estado` | `PENDIENTE`, `REVISADA` o `DESCARTADA`. |
 | | `caminoId` | Filtra por camino. |
 | `GET /api/auditoria` | `accion` | `CREAR`, `EDITAR` o `BORRAR`. |

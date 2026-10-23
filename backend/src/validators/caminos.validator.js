@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { booleanoQuerySchema } from './comun.js';
+import { booleanoQuerySchema, limiteSchema, paginaSchema } from './comun.js';
 
 const nombreSchema = z
   .string({ error: 'El nombre es obligatorio.' })
@@ -51,4 +51,6 @@ export const listarCaminosQuerySchema = z.object({
     .max(150, { error: 'El departamento no puede superar los 150 caracteres.' })
     .optional(),
   activo: booleanoQuerySchema.optional(),
+  pagina: paginaSchema,
+  limite: limiteSchema,
 });

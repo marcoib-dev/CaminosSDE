@@ -102,7 +102,8 @@ export async function obtenerCaminos() {
   const key = 'caminos';
   const cached = cacheGet(key);
   if (cached) return cached;
-  const respuesta = await solicitar('/caminos', { parametros: { activo: 'true' } });
+  // Endpoint liviano: solo caminos activos, sin timestamps. Se usa para el mapa.
+  const respuesta = await solicitar('/caminos/mapa');
   const data = respuesta?.datos ?? [];
   cacheSet(key, data);
   return data;
@@ -112,8 +113,22 @@ export async function obtenerPuntosInteres() {
   const key = 'puntos-interes';
   const cached = cacheGet(key);
   if (cached) return cached;
-  const respuesta = await solicitar('/puntos-interes');
-  const data = respuesta?.datos ?? [];
+
+  const LIMITE = 500;
+  const MAX_PAGINAS = 100;
+  const data = [];
+  let pagina = 1;
+  let totalPaginas = 1;
+
+  do {
+    const respuesta = await solicitar('/puntos-interes', {
+      parametros: { pagina, limite: LIMITE },
+    });
+    data.push(...(respuesta?.datos ?? []));
+    totalPaginas = respuesta?.paginacion?.totalPaginas ?? 1;
+    pagina += 1;
+  } while (pagina <= totalPaginas && pagina <= MAX_PAGINAS);
+
   cacheSet(key, data);
   return data;
 }

@@ -8,6 +8,7 @@ import {
 } from '../services/tramo.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/ApiError.js';
+import { opcionesPrisma, respuestaPaginada } from '../utils/paginacion.js';
 
 export const listar = asyncHandler(async (req, res) => {
   const { caminoId, estado, tipo, departamento } = req.consulta;
@@ -20,15 +21,19 @@ export const listar = asyncHandler(async (req, res) => {
     where.camino = { departamento: { equals: departamento, mode: 'insensitive' } };
   }
 
-  const tramos = await prisma.tramo.findMany({
-    where,
-    include: {
-      camino: { select: { id: true, nombre: true, localidad: true, departamento: true } },
-    },
-    orderBy: [{ camino: { nombre: 'asc' } }, { creadoEn: 'asc' }],
-  });
+  const [tramos, total] = await prisma.$transaction([
+    prisma.tramo.findMany({
+      where,
+      include: {
+        camino: { select: { id: true, nombre: true, localidad: true, departamento: true } },
+      },
+      orderBy: [{ camino: { nombre: 'asc' } }, { creadoEn: 'asc' }],
+      ...opcionesPrisma(req.consulta),
+    }),
+    prisma.tramo.count({ where }),
+  ]);
 
-  res.json({ datos: tramos });
+  res.json(respuestaPaginada(tramos, req.consulta, total));
 });
 
 /**

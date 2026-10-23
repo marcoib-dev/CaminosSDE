@@ -3,6 +3,8 @@ import {
   coordenadaSchema,
   estadoTramoSchema,
   geometriaLineStringSchema,
+  limiteSchema,
+  paginaSchema,
   tipoSuperficieSchema,
 } from './comun.js';
 
@@ -51,4 +53,6 @@ export const listarTramosQuerySchema = z.object({
     .trim()
     .max(150, { error: 'El departamento no puede superar los 150 caracteres.' })
     .optional(),
+  pagina: paginaSchema,
+  limite: limiteSchema,
 });
