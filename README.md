@@ -336,6 +336,8 @@ scripts/restaurar-postgres.sh $HOME/backups/caminos/caminos-2026-10-23_031500.sq
 
 Variables opcionales: `BACKUP_DIR` (por defecto `~/backups/caminos`), `RETENCION_DIAS` (30), `ENV_FILE`, `RCLONE_REMOTE`. Probá una restauración al menos una vez por trimestre: un backup que nunca se restauró no sirve.
 
+El backup cubre solo PostgreSQL. Guardá aparte una copia de `.env.produccion` (secretos) y tené en cuenta que las fotos viven en Cloudinary, no en el servidor.
+
 ### Comandos útiles
 
 | Comando | Qué hace |
