@@ -252,7 +252,7 @@ Editar `.env.produccion`:
 |---|---|
 | `POSTGRES_PASSWORD` | Contraseña larga. Usá solo letras, números y guiones: se inserta dentro de `DATABASE_URL` y los caracteres `@ : / #` la rompen. |
 | `JWT_SECRET` | 32 caracteres o más, aleatorios. Generarlo con `openssl rand -hex 32`. |
-| `FRONTEND_URL` | Origen público exacto, por ejemplo `https://caminos.example.gob.ar`. Si no coincide con el dominio real, las peticiones con `Origin` (login, altas, ediciones) se rechazan por CORS. |
+| `FRONTEND_URL` | Origen público exacto, por ejemplo `https://caminos.example.gob.ar`. Si no coincide con el dominio real, las peticiones con `Origin` (login, altas, ediciones) se rechazan por CORS. Acepta varios orígenes separados por coma, por ejemplo `http://192.168.1.36,http://ServerDebian.local`. |
 | `ADMIN_NOMBRE`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Credenciales del administrador que crea el seed. |
 | `SEED_SIN_DEMO` | `true` para crear solo el ADMIN y las categorías base, sin caminos ni puntos de ejemplo. |
 | `CLOUDINARY_*` | Sin estos valores la API responde `503` al firmar subidas de fotos. |
