@@ -16,20 +16,7 @@
       rel="stylesheet"
     />
     <title>Caminos Rurales SDE</title>
-    <script>
-      // Aplica el tema antes del primer pintado para evitar el destello claro.
-      (function () {
-        try {
-          var guardado = localStorage.getItem('caminos-rurales-tema');
-          var oscuro =
-            guardado === 'oscuro' ||
-            (!guardado && window.matchMedia('(prefers-color-scheme: dark)').matches);
-          if (oscuro) document.documentElement.classList.add('dark');
-        } catch (error) {
-          /* Sin localStorage se mantiene el tema claro. */
-        }
-      })();
-    </script>
+    <script src="/tema.js"></script>
   </head>
   <body>
     <div id="root"></div>

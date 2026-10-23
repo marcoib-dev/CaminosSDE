@@ -4,9 +4,10 @@ import { ApiError } from '../utils/ApiError.js';
 import { apiErrorDesdeZod } from '../utils/zod.js';
 
 export function rutaNoEncontrada(req, res) {
-  res.status(404).json({
-    mensaje: `Ruta no encontrada: ${req.method} ${req.originalUrl}`,
-  });
+  // La ruta pedida queda solo en el log del servidor: devolverla al cliente
+  // expone el mapeo interno de la API ante un escaneo.
+  console.warn('Ruta no encontrada:', req.method, req.originalUrl);
+  res.status(404).json({ mensaje: 'Ruta no encontrada.' });
 }
 
 export function manejarErrores(error, req, res, next) {

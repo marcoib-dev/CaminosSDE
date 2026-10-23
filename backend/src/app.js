@@ -1,5 +1,6 @@
 import cors from 'cors';
 import express from 'express';
+import helmet from 'helmet';
 import { env } from './config/env.js';
 import { manejarErrores, rutaNoEncontrada } from './middleware/errorHandler.js';
 import { limitadorGeneral } from './middleware/rateLimiter.js';
@@ -14,6 +15,21 @@ if (env.nodeEnv === 'production') {
 }
 
 app.disable('x-powered-by');
+
+// Cabeceras de endurecimiento. La CSP se define en Nginx, que es el único
+// origen que sirve el frontend. HSTS queda para cuando el dominio funcione
+// por HTTPS a través de Cloudflare Tunnel. Las cabeceras que también agrega
+// Nginx (X-Content-Type-Options, X-Frame-Options, Referrer-Policy) se
+// desactivan acá para no enviarlas duplicadas en las respuestas proxied.
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    hsts: false,
+    xContentTypeOptions: false,
+    xFrameOptions: false,
+    referrerPolicy: false,
+  })
+);
 
 const origenesPermitidos = env.frontendUrl
   .split(',')
