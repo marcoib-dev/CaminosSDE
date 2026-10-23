@@ -380,10 +380,10 @@ El backup cubre solo PostgreSQL. Guardá aparte una copia de `.env.produccion` (
 # Ejecución manual
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\backup-remoto.ps1
 
-# Tarea diaria a las 10:00 (ejecutar una vez)
+# Tarea diaria a las 13:00 (ejecutar una vez)
 $script = Join-Path $PWD 'scripts\backup-remoto.ps1'
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$script`"" -WorkingDirectory $PWD
-$trigger = New-ScheduledTaskTrigger -Daily -At 10:00
+$trigger = New-ScheduledTaskTrigger -Daily -At 13:00
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 30)
 Register-ScheduledTask -TaskName 'CaminosSDE - Backup diario' -Action $action -Trigger $trigger -Settings $settings -Force
 ```
