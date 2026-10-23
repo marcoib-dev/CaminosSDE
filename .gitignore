@@ -27,3 +27,6 @@ Thumbs.db
 # Prisma
 *.db
 backend/prisma/*.db
+
+# Documentos internos (pueden contener datos del homelab)
+AUDITORIA_SEGURIDAD.md
