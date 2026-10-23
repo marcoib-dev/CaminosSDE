@@ -2,6 +2,7 @@ import { prisma } from '../config/prisma.js';
 import { ApiError } from '../utils/ApiError.js';
 import { calcularLongitudKm, dividirGeometria } from '../utils/geojson.js';
 import { registrarAuditoria } from './auditoria.service.js';
+import { invalidarPrioridades } from './cachePrioridad.js';
 
 const geometriasIguales = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -58,6 +59,7 @@ export async function crearTramo(datos, { usuarioId = null, ip = null } = {}) {
     ip,
   });
 
+  invalidarPrioridades();
   return tramo;
 }
 
@@ -99,6 +101,7 @@ export async function actualizarTramo(id, datos, { usuarioId = null, ip = null }
       tx
     );
 
+    invalidarPrioridades();
     return actualizado;
   });
 }
@@ -128,6 +131,8 @@ export async function eliminarTramo(id, { usuarioId = null, ip = null } = {}) {
       },
       tx
     );
+
+    invalidarPrioridades();
   });
 }
 
@@ -272,6 +277,7 @@ export async function dividirTramo(id, datos, { usuarioId = null, ip = null } = 
       tx
     );
 
+    invalidarPrioridades();
     return segmentos;
   });
 }

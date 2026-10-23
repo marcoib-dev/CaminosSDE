@@ -23,7 +23,7 @@ export const env = {
   port: puerto,
   databaseUrl: process.env.DATABASE_URL,
   jwtSecret: process.env.JWT_SECRET,
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1d',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',

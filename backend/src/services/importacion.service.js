@@ -2,6 +2,7 @@ import { prisma } from '../config/prisma.js';
 import { ApiError } from '../utils/ApiError.js';
 import { calcularLongitudKm } from '../utils/geojson.js';
 import { registrarAuditoria } from './auditoria.service.js';
+import { invalidarPrioridades } from './cachePrioridad.js';
 import { leerArchivoDeImportacion } from './importacion/lectura.js';
 import {
   inferirDepartamento,
@@ -84,7 +85,7 @@ export async function previsualizarImportacion({ buffer, nombreArchivo, mapeo })
 export async function confirmarImportacion({ features, mapeo }, { usuarioId = null, ip = null } = {}) {
   const reglas = normalizarMapeo(mapeo);
 
-  return prisma.$transaction(
+  const resultado = await prisma.$transaction(
     async (tx) => {
       const caminoPorGrupo = new Map();
       const caminos = [];
@@ -199,4 +200,7 @@ export async function confirmarImportacion({ features, mapeo }, { usuarioId = nu
     },
     { timeout: 60000, maxWait: 15000 }
   );
+
+  invalidarPrioridades();
+  return resultado;
 }

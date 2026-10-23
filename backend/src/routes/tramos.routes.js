@@ -9,6 +9,7 @@ import {
   listarPrioridades,
 } from '../controllers/tramos.controller.js';
 import { autenticar, autorizar } from '../middleware/auth.js';
+import { limitadorPrioridad } from '../middleware/rateLimiter.js';
 import { validar } from '../middleware/validar.js';
 import { idParamSchema } from '../validators/comun.js';
 import {
@@ -22,7 +23,7 @@ const router = Router();
 const soloEditores = [autenticar, autorizar('EDITOR', 'ADMIN')];
 
 router.get('/', validar({ query: listarTramosQuerySchema }), listar);
-router.get('/prioridad', listarPrioridades);
+router.get('/prioridad', limitadorPrioridad, listarPrioridades);
 router.get('/:id/historial', ...soloEditores, validar({ params: idParamSchema }), historial);
 
 router.post('/', ...soloEditores, validar({ body: crearTramoSchema }), crear);

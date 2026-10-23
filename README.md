@@ -177,8 +177,8 @@ La aplicación queda disponible en `http://localhost:5173`. El mapa público se 
 |---|---|---|
 | `DATABASE_URL` | Sí | Cadena de conexión de PostgreSQL. En Neon incluir `?sslmode=require`. |
 | `JWT_SECRET` | Sí | Clave aleatoria de al menos 32 caracteres para firmar los tokens JWT. |
-| `JWT_EXPIRES_IN` | No | Vigencia del token. Por defecto `7d`. |
-| `NODE_ENV` | No | `development` o `production`. En producción activa `trust proxy` para el rate limit detrás de Render. |
+| `JWT_EXPIRES_IN` | No | Vigencia del token. Por defecto `1d`. |
+| `NODE_ENV` | No | `development` o `production`. En producción activa `trust proxy` para el rate limit detrás de Nginx o de un túnel. |
 | `PORT` | No | Puerto HTTP. Por defecto `3000`. |
 | `FRONTEND_URL` | No | Origen permitido por CORS. Admite varios separados por coma. En desarrollo también se aceptan `http://localhost:<puerto>`. |
 | `ADMIN_NOMBRE` | No | Nombre del administrador inicial. Por defecto `Administrador`. |
@@ -354,10 +354,13 @@ Si cambiaste `POSTGRES_USER` o `POSTGRES_DB`, ajustá el usuario y el nombre de 
 ## Autenticación
 
 - Los endpoints protegidos esperan el encabezado `Authorization: Bearer <token>`.
-- El token se obtiene con `POST /api/auth/login`.
+- El token se obtiene con `POST /api/auth/login` y dura 1 día (`JWT_EXPIRES_IN=1d`).
 - Un usuario desactivado no puede autenticarse ni seguir usando un token emitido previamente.
+- Cada usuario tiene un `tokenVersion`: al cambiar la contraseña o al desactivar la cuenta, los tokens anteriores dejan de ser válidos. `POST /api/auth/change-password` devuelve un token nuevo para que la sesión actual continúe.
+- Las contraseñas se guardan con bcrypt (12 rondas). Los hashes creados con el costo anterior se actualizan de forma transparente en el primer login exitoso. La política exige al menos 8 caracteres y rechaza las contraseñas más comunes, las que repiten un solo carácter y las iguales al email.
+- Rate limits: 300 requests por IP cada 15 minutos en toda la API, 10 intentos fallidos de login por IP + email cada 15 minutos (30 por IP), 20 consultas por minuto a `/api/tramos/prioridad` y 5 sugerencias cada 15 minutos por IP.
 - Roles: `ADMIN` y `EDITOR`. El rol lector no requiere login.
-- En el frontend el token se guarda en `localStorage` (`caminos-rurales-token`). Al iniciar la aplicación se valida con `GET /api/auth/me`; si el token expiró o el usuario fue desactivado se cierra la sesión automáticamente.
+- En el frontend el token se guarda en `localStorage` (`caminos-rurales-token`). Al iniciar la aplicación se valida con `GET /api/auth/me`; si el token expiró, el usuario fue desactivado o la sesión fue revocada, se cierra la sesión automáticamente.
 - Las rutas `/perfil` y `/sugerencias` requieren sesión (la segunda, rol EDITOR o ADMIN). `/usuarios` y `/auditoria` requieren rol ADMIN.
 
 Los errores tienen este formato:
@@ -400,13 +403,13 @@ Los errores tienen este formato:
 | GET | `/api/caminos` | Público | — (query: `q`, `departamento`, `activo`) | `200 { datos: Camino[] }` con `tramos` y `fotos` |
 | GET | `/api/caminos/:id` | Público | — | `200 { datos: Camino }` con `tramos` y `fotos` · `404` |
 | GET | `/api/tramos` | Público | — (query: `caminoId`, `estado`, `tipo`, `departamento`) | `200 { datos: Tramo[] }` con datos básicos del camino |
-| GET | `/api/tramos/prioridad` | Público | — | `200 { datos: TramoConPrioridad[] }` ordenados de mayor a menor puntaje |
+| GET | `/api/tramos/prioridad` | Público · máx. 20 por minuto por IP | — | `200 { datos: TramoConPrioridad[] }` ordenados de mayor a menor puntaje (cacheado 60 s) · `429` |
 | GET | `/api/puntos-interes` | Público | — (query: `categoria`) | `200 { datos: PuntoInteres[] }` |
 | GET | `/api/categorias-puntos` | Público | — | `200 { datos: CategoriaPunto[] }` con `totalPuntos` |
 | POST | `/api/sugerencias` | Público · máx. 5 cada 15 min por IP | `{ texto, contacto?, caminoId?, tramoId? }` | `201 { datos: { id, estado, creadoEn }, mensaje }` · `429` |
-| POST | `/api/auth/login` | Público | `{ email, password }` | `200 { datos: { token, usuario } }` · `401` |
+| POST | `/api/auth/login` | Público · máx. 10 fallos por IP + email cada 15 min | `{ email, password }` | `200 { datos: { token, usuario } }` · `401` · `429` |
 | GET | `/api/auth/me` | Autenticado | — | `200 { datos: Usuario }` · `401` |
-| POST | `/api/auth/change-password` | Autenticado | `{ passwordActual, passwordNueva }` | `200 { mensaje }` · `400` |
+| POST | `/api/auth/change-password` | Autenticado | `{ passwordActual, passwordNueva }` | `200 { datos: { token }, mensaje }` · `400` |
 | POST | `/api/caminos` | EDITOR | `{ nombre, localidad, departamento, descripcion?, activo? }` | `201 { datos: Camino, mensaje }` |
 | POST | `/api/caminos/importar` | EDITOR | Multipart: `archivo` (.kml/.gpkg) y `mapeo` opcional (JSON en texto) | `200 { datos: PrevisualizacionImportacion }` · `400` · `413` |
 | POST | `/api/caminos/importar/confirmar` | EDITOR | `{ features: [...], mapeo? }` | `201 { datos: { resumen, caminos, tramos }, mensaje }` · `400` / `404` |
@@ -433,6 +436,8 @@ Los errores tienen este formato:
 | GET | `/api/auditoria` | ADMIN | — (query: `accion`, `entidad`, `usuarioId`, `desde`, `hasta`, `limite`) | `200 { datos: Auditoria[], total }` |
 
 Todos los endpoints protegidos devuelven `401` sin token válido y `403` si el rol no alcanza. Los errores de validación devuelven `400` con `detalles`.
+
+Toda la API tiene un límite global de 300 requests por IP cada 15 minutos (`429`); `/api/health` no consume cupo. El body JSON acepta hasta 1 MB, salvo `POST /api/caminos/importar/confirmar`, que admite hasta 10 MB.
 
 `DELETE /api/caminos/:id` es una baja definitiva (elimina en cascada sus tramos e historial). Para conservar los datos, usar `PATCH /api/caminos/:id` con `{ "activo": false }`.
 

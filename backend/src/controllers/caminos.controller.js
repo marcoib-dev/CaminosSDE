@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma.js';
 import { registrarAuditoria } from '../services/auditoria.service.js';
+import { invalidarPrioridades } from '../services/cachePrioridad.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
@@ -105,5 +106,7 @@ export const eliminar = asyncHandler(async (req, res) => {
     ip: req.ip,
   });
 
+  // La baja elimina en cascada sus tramos.
+  invalidarPrioridades();
   res.json({ mensaje: 'Camino eliminado correctamente.' });
 });

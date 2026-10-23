@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma.js';
 import { registrarAuditoria } from '../services/auditoria.service.js';
+import { invalidarPrioridades } from '../services/cachePrioridad.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
@@ -39,6 +40,7 @@ export const crear = asyncHandler(async (req, res) => {
     ip: req.ip,
   });
 
+  invalidarPrioridades();
   res.status(201).json({ datos: punto, mensaje: 'Punto de interés creado correctamente.' });
 });
 
@@ -70,6 +72,7 @@ export const actualizar = asyncHandler(async (req, res) => {
     ip: req.ip,
   });
 
+  invalidarPrioridades();
   res.json({ datos: punto, mensaje: 'Punto de interés actualizado correctamente.' });
 });
 
@@ -94,5 +97,6 @@ export const eliminar = asyncHandler(async (req, res) => {
     ip: req.ip,
   });
 
+  invalidarPrioridades();
   res.json({ mensaje: 'Punto de interés eliminado correctamente.' });
 });

@@ -48,6 +48,7 @@ model Usuario {
   passwordHash         String
   rol                  Rol              @default(EDITOR)
   activo               Boolean          @default(true)
+  tokenVersion         Int              @default(0)
   creadoEn             DateTime         @default(now())
   actualizadoEn        DateTime         @updatedAt
   historial            HistorialTramo[]

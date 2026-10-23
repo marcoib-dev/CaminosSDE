@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { cambiarPassword } from '../services/api.js';
+import { guardarToken } from '../services/token.js';
 import { formatearFecha } from '../utils/formato.js';
 
 const ETIQUETA_ROL = { ADMIN: 'Administrador', EDITOR: 'Editor' };
@@ -34,6 +35,10 @@ export default function PerfilPage() {
 
     try {
       const respuesta = await cambiarPassword({ passwordActual, passwordNueva });
+      // El backend revoca los tokens anteriores y devuelve uno nuevo.
+      if (respuesta?.datos?.token) {
+        guardarToken(respuesta.datos.token);
+      }
       setMensaje(respuesta?.mensaje || 'Contraseña actualizada correctamente.');
       setPasswordActual('');
       setPasswordNueva('');

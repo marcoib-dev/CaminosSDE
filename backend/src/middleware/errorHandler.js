@@ -55,6 +55,10 @@ export function manejarErrores(error, req, res, next) {
     return res.status(400).json({ mensaje: 'El cuerpo de la solicitud no es un JSON válido.' });
   }
 
+  if (error?.type === 'entity.too.large' || error?.status === 413) {
+    return res.status(413).json({ mensaje: 'El cuerpo de la solicitud es demasiado grande.' });
+  }
+
   console.error('Error no controlado:', error);
   return res.status(500).json({ mensaje: 'Error interno del servidor.' });
 }

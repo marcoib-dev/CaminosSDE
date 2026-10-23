@@ -39,14 +39,21 @@ export const autenticar = asyncHandler(async (req, res, next) => {
 
   const usuario = await prisma.usuario.findUnique({
     where: { id: payload.sub },
-    select: usuarioPublicoSelect,
+    select: { ...usuarioPublicoSelect, tokenVersion: true },
   });
 
   if (!usuario || !usuario.activo) {
     throw new ApiError(401, 'El usuario no existe o está desactivado.');
   }
 
-  req.usuario = usuario;
+  // Los tokens emitidos antes de un cambio de contraseña o de una baja
+  // conservan una versión anterior y dejan de ser válidos.
+  if (Number(payload.tv ?? 0) !== usuario.tokenVersion) {
+    throw new ApiError(401, 'La sesión fue invalidada. Iniciá sesión nuevamente.');
+  }
+
+  const { tokenVersion, ...usuarioPublico } = usuario;
+  req.usuario = usuarioPublico;
   next();
 });
 

@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import { env } from './config/env.js';
 import { manejarErrores, rutaNoEncontrada } from './middleware/errorHandler.js';
+import { limitadorGeneral } from './middleware/rateLimiter.js';
 import rutas from './routes/index.js';
 import { ApiError } from './utils/ApiError.js';
 
@@ -34,8 +35,15 @@ app.use(
   })
 );
 
-// Límite amplio para la confirmación de importaciones (geometrías en GeoJSON).
-app.use(express.json({ limit: '10mb' }));
+// Límite global por IP. Va antes de parsear el body para cortar el abuso temprano.
+app.use('/api', limitadorGeneral);
+
+// Confirmación de importación: geometrías en GeoJSON, hasta 10 MB. Se monta
+// antes del parser global para que el límite de 1 MB no la rechace.
+app.use('/api/caminos/importar/confirmar', express.json({ limit: '10mb' }));
+
+// Resto de la API: 1 MB es suficiente para cualquier body normal.
+app.use(express.json({ limit: '1mb' }));
 
 app.use('/api', rutas);
 

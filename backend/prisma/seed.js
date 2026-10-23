@@ -2,9 +2,9 @@ import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import * as turf from '@turf/turf';
+import { RONDAS_BCRYPT } from '../src/config/seguridad.js';
 
 const prisma = new PrismaClient();
-const RONDAS_BCRYPT = 10;
 
 const longitudKm = (geometria) => {
   const km = turf.length(turf.lineString(geometria.coordinates), { units: 'kilometers' });

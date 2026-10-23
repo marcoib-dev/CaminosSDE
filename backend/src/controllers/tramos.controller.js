@@ -1,5 +1,5 @@
 import { prisma } from '../config/prisma.js';
-import { calcularPrioridad } from '../services/prioridad.js';
+import { obtenerPrioridades } from '../services/cachePrioridad.js';
 import {
   actualizarTramo,
   crearTramo,
@@ -33,36 +33,12 @@ export const listar = asyncHandler(async (req, res) => {
 
 /**
  * Devuelve todos los tramos ordenados de mayor a menor prioridad.
- * El puntaje se calcula al vuelo a partir de los pesos de services/prioridad.js.
+ * El cálculo se cachea 60 s y se invalida al editar tramos o puntos de interés.
  */
 export const listarPrioridades = asyncHandler(async (req, res) => {
-  const [tramos, puntosInteres, categorias] = await Promise.all([
-    prisma.tramo.findMany({
-      include: {
-        camino: { select: { id: true, nombre: true, localidad: true, departamento: true } },
-      },
-    }),
-    prisma.puntoInteres.findMany({
-      select: { id: true, nombre: true, categoria: true, latitud: true, longitud: true },
-    }),
-    prisma.categoriaPunto.findMany({ select: { clave: true, peso: true } }),
-  ]);
+  const datos = await obtenerPrioridades();
 
-  const pesosCategoria = Object.fromEntries(
-    categorias.map((categoria) => [categoria.clave, categoria.peso])
-  );
-
-  const datos = tramos
-    .map((tramo) => ({
-      ...tramo,
-      prioridad: calcularPrioridad(tramo, puntosInteres, pesosCategoria),
-    }))
-    .sort(
-      (a, b) =>
-        b.prioridad.puntaje - a.prioridad.puntaje ||
-        a.camino.nombre.localeCompare(b.camino.nombre, 'es')
-    );
-
+  res.set('Cache-Control', 'public, max-age=30');
   res.json({ datos });
 });
 

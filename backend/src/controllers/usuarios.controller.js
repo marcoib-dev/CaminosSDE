@@ -1,11 +1,10 @@
 import bcrypt from 'bcrypt';
 import { prisma } from '../config/prisma.js';
+import { RONDAS_BCRYPT } from '../config/seguridad.js';
 import { usuarioPublicoSelect } from '../middleware/auth.js';
 import { registrarAuditoria } from '../services/auditoria.service.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-
-const RONDAS_BCRYPT = 10;
 
 export const listar = asyncHandler(async (req, res) => {
   const usuarios = await prisma.usuario.findMany({
@@ -60,7 +59,11 @@ export const actualizarEstado = asyncHandler(async (req, res) => {
 
   const actualizado = await prisma.usuario.update({
     where: { id: usuario.id },
-    data: { activo },
+    data: {
+      activo,
+      // Al desactivar, invalida de inmediato los tokens vigentes.
+      ...(activo ? {} : { tokenVersion: { increment: 1 } }),
+    },
     select: usuarioPublicoSelect,
   });
 

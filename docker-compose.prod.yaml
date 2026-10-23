@@ -33,7 +33,7 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://${POSTGRES_USER:-caminos}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-caminos_rurales}?schema=public
       JWT_SECRET: ${JWT_SECRET:?Definí JWT_SECRET en .env.produccion}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
       FRONTEND_URL: ${FRONTEND_URL:?Definí FRONTEND_URL en .env.produccion}
       PRIORIDAD_UMBRAL_KM: ${PRIORIDAD_UMBRAL_KM:-1}
       ADMIN_NOMBRE: ${ADMIN_NOMBRE:-Administrador}
