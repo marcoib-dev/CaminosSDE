@@ -372,6 +372,26 @@ Variables opcionales: `BACKUP_DIR` (por defecto `~/backups/caminos`), `RETENCION
 
 El backup cubre solo PostgreSQL. Guardá aparte una copia de `.env.produccion` (secretos) y tené en cuenta que las fotos viven en Cloudinary, no en el servidor.
 
+#### Copia en una PC con Windows (modelo pull)
+
+`scripts/backup-remoto.ps1` ejecuta el backup en el servidor por SSH y se trae el `.sql.gz` a esta PC, donde queda una segunda copia. No abre puertos en Windows: la conexión sale de la PC hacia el servidor y usa la clave SSH, sin contraseña.
+
+```powershell
+# Ejecución manual
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\backup-remoto.ps1
+
+# Tarea diaria a las 10:00 (ejecutar una vez)
+$script = Join-Path $PWD 'scripts\backup-remoto.ps1'
+$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$script`"" -WorkingDirectory $PWD
+$trigger = New-ScheduledTaskTrigger -Daily -At 10:00
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 30)
+Register-ScheduledTask -TaskName 'CaminosSDE - Backup diario' -Action $action -Trigger $trigger -Settings $settings -Force
+```
+
+Parámetros: `-Servidor`, `-Usuario`, `-Destino` (por defecto `D:\Proyectos de python\BACKUPS\CaminosRurales`) y `-RetencionDias` (60). Deja un `backup.log` en el destino, valida el gzip antes de aceptarlo y descarta el archivo si llegó truncado. La tarea corre solo con la PC encendida; `-StartWhenAvailable` la ejecuta al iniciar si se perdió el horario. El servidor conserva además su propia copia con retención de 30 días.
+
+El script debe guardarse en **UTF-8 con BOM**: PowerShell 5.1 lee los `.ps1` sin BOM como ANSI y rompe los acentos.
+
 ### Comandos útiles
 
 | Comando | Qué hace |
@@ -383,6 +403,7 @@ El backup cubre solo PostgreSQL. Guardá aparte una copia de `.env.produccion` (
 | `docker compose --env-file .env.produccion -f docker-compose.prod.yaml exec postgres psql -U caminos -d caminos_rurales` | Abre la consola SQL. |
 | `docker compose --env-file .env.produccion -f docker-compose.prod.yaml --profile tunnel up -d` | Levanta también cloudflared como contenedor. |
 | `scripts/backup-postgres.sh` | Genera un backup comprimido y aplica la retención. |
+| `powershell -File scripts\backup-remoto.ps1` | Trae el backup del servidor a `D:\Proyectos de python\BACKUPS\CaminosRurales`. |
 
 ### Notas
 
