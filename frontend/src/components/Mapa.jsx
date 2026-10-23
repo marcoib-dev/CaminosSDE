@@ -15,9 +15,10 @@ const ATRIBUCION =
   '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>';
 
 function crearIconoPoi(categoria) {
+  const claseCategoria = `marcador-poi--${categoria.clave.toLowerCase()}`;
   return L.divIcon({
     className: 'marcador-poi-contenedor',
-    html: `<span class="marcador-poi" style="background-color:${categoria.color}" aria-hidden="true">${categoria.inicial}</span>`,
+    html: `<span class="marcador-poi ${claseCategoria}" style="background-color:${categoria.color}" aria-hidden="true">${categoria.inicial}</span>`,
     iconSize: [30, 30],
     iconAnchor: [15, 15],
     popupAnchor: [0, -14],
