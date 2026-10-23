@@ -332,6 +332,13 @@ El contenedor sirve HTTP y no depende de Cloudflare. Para publicarlo con el prox
 4. Asegurate de que el proxy envíe `X-Forwarded-For` con la IP del cliente. Nginx usa el último IP de la cadena; si hay varios proxies, el inmediato debe sobrescribirla con `$remote_addr` para no arrastrar valores del cliente.
 5. No levantes el perfil `tunnel` ni configures `CLOUDFLARE_TUNNEL_TOKEN`.
 
+| Escenario | `BIND_HOST` | `HTTP_PORT` | Detalle |
+|---|---|---|---|
+| Proxy en el mismo host (Caddy/Nginx/Traefik) | `127.0.0.1` | `8080` | El proxy administra 80/443. |
+| Proxy en otra máquina o contenedor | IP privada del servidor | `8080` | Firewall: solo el proxy debe llegar. |
+| Cloudflare Tunnel con cloudflared en el host | `127.0.0.1` | `80` u `8080` | cloudflared apunta a localhost. |
+| cloudflared como servicio de Compose | `127.0.0.1` | `80` (solo depuración) | Usa `frontend:8080` por la red interna. |
+
 Ejemplo con Caddy en el mismo host:
 
 ```caddy
